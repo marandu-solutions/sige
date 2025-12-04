@@ -7,23 +7,15 @@ import 'package:module_auth/src/auth_service.dart';
 import 'package:module_auth/src/auth_wrapper.dart';
 import 'firebase_options.dart';
 
-import 'package:firebase_auth/firebase_auth.dart';
-
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
 
-  final auth = FirebaseAuth.instance;
-  final initialRoute = auth.currentUser == null
-      ? AppRoutes.login
-      : AppRoutes.homepage;
-
-  runApp(MyApp(initialRoute: initialRoute));
+  runApp(const MyApp());
 }
 
 class MyApp extends StatelessWidget {
-  final String initialRoute;
-  const MyApp({super.key, required this.initialRoute});
+  const MyApp({super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -33,7 +25,7 @@ class MyApp extends StatelessWidget {
         theme: AppThemes.lightTheme,
         darkTheme: AppThemes.darkTheme,
         themeMode: ThemeMode.system,
-        initialRoute: initialRoute,
+        home: const AuthWrapper(),
         onGenerateRoute: AppRoutes.generateRoute,
       ),
     );

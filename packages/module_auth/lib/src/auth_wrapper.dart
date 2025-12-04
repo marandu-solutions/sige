@@ -17,11 +17,18 @@ class _AuthWrapperState extends State<AuthWrapper> {
   void didChangeDependencies() {
     super.didChangeDependencies();
     final authService = context.watch<AuthService>();
+    print(
+        'AuthWrapper: Reconstruído com status: ${authService.status}, userData: ${authService.userData != null}');
     if (authService.status == AuthStatus.authenticated &&
+        authService.userData != null &&
         _lastStatus != AuthStatus.authenticated) {
       _lastStatus = AuthStatus.authenticated;
+      print('AuthWrapper: Navegando para /homepage');
       WidgetsBinding.instance.addPostFrameCallback((_) {
-        Navigator.pushReplacementNamed(context, '/');
+        Navigator.pushReplacementNamed(context, '/homepage', arguments: {
+          'userData': authService.userData,
+          'tenantData': authService.tenantData,
+        });
       });
     } else {
       _lastStatus = authService.status;

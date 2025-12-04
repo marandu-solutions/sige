@@ -40,8 +40,17 @@ dependencies:
 
   module_auth:
     path: packages/module_auth
+  module_basic_dashboard:
+    path: packages/module_basic_dashboard
+  module_estoque:
+    path: packages/module_estoque
+  module_kanban:
+    path: packages/module_kanban
+
+
   provider: ^6.1.5+1
   google_nav_bar: ^5.0.7
+  lucide_icons: ^0.257.0
 
 dev_dependencies:
   flutter_test:

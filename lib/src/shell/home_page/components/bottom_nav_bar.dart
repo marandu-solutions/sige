@@ -2,22 +2,16 @@ import 'package:flutter/material.dart';
 import 'package:google_nav_bar/google_nav_bar.dart';
 import 'package:lucide_icons/lucide_icons.dart';
 
-// TODO: Receber a lista de módulos dinamicamente.
-// Por enquanto, usamos uma lista estática de placeholders.
-const List<Map<String, dynamic>> _navItems = [
-  {'icon': LucideIcons.home, 'label': 'Módulo 1'},
-  {'icon': LucideIcons.package, 'label': 'Módulo 2'},
-  {'icon': LucideIcons.users, 'label': 'Módulo 3'},
-];
-
 class BottomNavBar extends StatelessWidget {
   final int selectedIndex;
   final ValueChanged<int> onItemSelected;
+  final List<Map<String, dynamic>> modulosInfo;
 
   const BottomNavBar({
     super.key,
     required this.selectedIndex,
     required this.onItemSelected,
+    required this.modulosInfo,
   });
 
   @override
@@ -49,11 +43,11 @@ class BottomNavBar extends StatelessWidget {
           duration: const Duration(milliseconds: 400),
           tabBackgroundColor: theme.colorScheme.primary,
           color: theme.colorScheme.onSurfaceVariant,
-          tabs: List.generate(_navItems.length, (index) {
-            final item = _navItems[index];
+          tabs: List.generate(modulosInfo.length, (index) {
+            final item = modulosInfo[index];
             return GButton(
-              icon: item['icon'] as IconData,
-              text: item['label'] as String,
+              icon: item['icone'] as IconData,
+              text: item['titulo'] as String,
             );
           }),
           selectedIndex: selectedIndex,
