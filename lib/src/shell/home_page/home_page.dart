@@ -118,7 +118,9 @@ class _HomePageState extends ConsumerState<HomePage> {
 
     // Enquanto os dados do usuário não carregam, exibe um placeholder.
     if (authService.user == null) {
-      return const Scaffold(body: Center(child: CircularProgressIndicator()));
+      return const Scaffold(
+        body: Center(child: CircularProgressIndicator()),
+      );
     }
 
     final userName =
@@ -168,7 +170,10 @@ class _HomePageState extends ConsumerState<HomePage> {
             extendBody: true,
             body: _modulosAtivos[_selectedIndex],
             bottomNavigationBar: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 20),
+              padding: const EdgeInsets.symmetric(
+                horizontal: 20,
+                vertical: 20,
+              ),
               child: BottomNavBar(
                 selectedIndex: _selectedIndex,
                 onItemSelected: _onItemTapped,

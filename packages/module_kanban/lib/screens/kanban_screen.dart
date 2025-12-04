@@ -1,22 +1,40 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:module_kanban/models/kanban_column_model.dart';
 import 'package:module_kanban/providers/kanban_provider.dart';
+import 'package:module_kanban/widgets/add_edit_kanban_column_dialog.dart';
 import 'package:module_kanban/widgets/kanban_column.dart';
 import 'package:module_kanban/widgets/add_kanban_card_dialog.dart';
 import 'package:lucide_icons/lucide_icons.dart';
+import 'dart:math';
 
-/// Tela principal do Kanban
-class KanbanScreen extends ConsumerWidget {
+class KanbanScreen extends ConsumerStatefulWidget {
   final String tenantId;
 
-  const KanbanScreen({
-    super.key,
-    required this.tenantId,
-  });
+  const KanbanScreen({super.key, required this.tenantId});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final kanbanAsync = ref.watch(kanbanProvider);
+  ConsumerState<KanbanScreen> createState() => _KanbanScreenState();
+}
+
+class _KanbanScreenState extends ConsumerState<KanbanScreen> {
+  late final ScrollController _scrollController;
+
+  @override
+  void initState() {
+    super.initState();
+    _scrollController = ScrollController();
+  }
+
+  @override
+  void dispose() {
+    _scrollController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final kanbanAsync = ref.watch(kanbanProvider(widget.tenantId));
     final colorScheme = Theme.of(context).colorScheme;
 
     return Scaffold(
@@ -28,9 +46,8 @@ class KanbanScreen extends ConsumerWidget {
         elevation: 4,
         actions: [
           IconButton(
-            icon: const Icon(LucideIcons.refreshCw),
-            onPressed: () =>
-                ref.read(kanbanProvider.notifier).loadCards(tenantId),
+            icon: const Icon(LucideIcons.plus),
+            onPressed: () => _showAddEditColumnDialog(context, ref),
           ),
         ],
       ),
@@ -42,7 +59,7 @@ class KanbanScreen extends ConsumerWidget {
             children: [
               Icon(LucideIcons.alertCircle, size: 64, color: colorScheme.error),
               const SizedBox(height: 16),
-              Text('Erro ao carregar cartões',
+              Text('Erro ao carregar o quadro',
                   style: Theme.of(context).textTheme.titleMedium),
               const SizedBox(height: 8),
               Text(error.toString(),
@@ -50,47 +67,71 @@ class KanbanScreen extends ConsumerWidget {
             ],
           ),
         ),
-        data: (cards) => Row(
+        data: (board) => Stack(
           children: [
-            // Coluna To Do
-            Expanded(
-              child: KanbanColumn(
-                title: 'A Fazer',
-                columnId: 'to_do',
-                cards: cards
-                    .where((card) => card.colunaStatus == 'to_do')
-                    .toList(),
-                color: colorScheme.secondary,
-                onCardMove: (cardId, newColumn) => ref
-                    .read(kanbanProvider.notifier)
-                    .moveCard(cardId, newColumn),
+            ReorderableListView.builder(
+              buildDefaultDragHandles: false,
+              scrollDirection: Axis.horizontal,
+              scrollController: _scrollController,
+              itemCount: board.columns.length,
+              itemBuilder: (context, index) {
+                final column = board.columns[index];
+                final cards = board.cards
+                    .where((card) => card.colunaStatus == column.id)
+                    .toList();
+                return SizedBox(
+                  key: ValueKey(column.id),
+                  width: 300,
+                  child: KanbanColumn(
+                    column: column,
+                    cards: cards,
+                    columnIndex: index,
+                    onCardMove: (cardId, newColumnId) => ref
+                        .read(kanbanProvider(widget.tenantId).notifier)
+                        .moveCard(cardId, newColumnId),
+                    onEdit: () =>
+                        _showAddEditColumnDialog(context, ref, column: column),
+                  ),
+                );
+              },
+              onReorder: (oldIndex, newIndex) {
+                ref
+                    .read(kanbanProvider(widget.tenantId).notifier)
+                    .reorderColumns(oldIndex, newIndex);
+              },
+            ),
+            Align(
+              alignment: Alignment.centerLeft,
+              child: Padding(
+                padding: const EdgeInsets.all(16.0),
+                child: FloatingActionButton(
+                  onPressed: () {
+                    _scrollController.animateTo(
+                      _scrollController.offset - 300,
+                      duration: const Duration(milliseconds: 300),
+                      curve: Curves.easeOut,
+                    );
+                  },
+                  heroTag: 'scroll_left',
+                  child: const Icon(LucideIcons.arrowLeft),
+                ),
               ),
             ),
-            // Coluna In Progress
-            Expanded(
-              child: KanbanColumn(
-                title: 'Em Progresso',
-                columnId: 'in_progress',
-                cards: cards
-                    .where((card) => card.colunaStatus == 'in_progress')
-                    .toList(),
-                color: colorScheme.tertiary,
-                onCardMove: (cardId, newColumn) => ref
-                    .read(kanbanProvider.notifier)
-                    .moveCard(cardId, newColumn),
-              ),
-            ),
-            // Coluna Done
-            Expanded(
-              child: KanbanColumn(
-                title: 'Concluído',
-                columnId: 'done',
-                cards:
-                    cards.where((card) => card.colunaStatus == 'done').toList(),
-                color: colorScheme.primary,
-                onCardMove: (cardId, newColumn) => ref
-                    .read(kanbanProvider.notifier)
-                    .moveCard(cardId, newColumn),
+            Align(
+              alignment: Alignment.centerRight,
+              child: Padding(
+                padding: const EdgeInsets.all(16.0),
+                child: FloatingActionButton(
+                  onPressed: () {
+                    _scrollController.animateTo(
+                      _scrollController.offset + 300,
+                      duration: const Duration(milliseconds: 300),
+                      curve: Curves.easeOut,
+                    );
+                  },
+                  heroTag: 'scroll_right',
+                  child: const Icon(LucideIcons.arrowRight),
+                ),
               ),
             ),
           ],
@@ -102,6 +143,7 @@ class KanbanScreen extends ConsumerWidget {
         label: const Text('Adicionar Card'),
         backgroundColor: colorScheme.primary,
         foregroundColor: colorScheme.onPrimary,
+        heroTag: 'add_card',
       ),
     );
   }
@@ -110,9 +152,47 @@ class KanbanScreen extends ConsumerWidget {
     showDialog(
       context: context,
       builder: (context) => AddKanbanCardDialog(
-        tenantId: tenantId,
-        onSave: (card) => ref.read(kanbanProvider.notifier).addCard(card),
+        tenantId: widget.tenantId,
+        onSave: (card) =>
+            ref.read(kanbanProvider(widget.tenantId).notifier).addCard(card),
       ),
     );
+  }
+
+  void _showAddEditColumnDialog(BuildContext context, WidgetRef ref,
+      {KanbanColumnModel? column}) {
+    final board = ref.read(kanbanProvider(widget.tenantId)).valueOrNull;
+    showDialog(
+      context: context,
+      builder: (context) => AddEditKanbanColumnDialog(
+        column: column,
+        onSave: (title, color) {
+          if (column != null) {
+            // Update
+            final updatedColumn =
+                column.copyWith(title: title, colorValue: color.value);
+            ref
+                .read(kanbanProvider(widget.tenantId).notifier)
+                .updateColumn(updatedColumn);
+          } else {
+            // Add
+            final newColumn = KanbanColumnModel(
+              id: _generateColumnId(),
+              tenantId: widget.tenantId,
+              title: title,
+              colorValue: color.value,
+              order: board?.columns.length ?? 0,
+            );
+            ref
+                .read(kanbanProvider(widget.tenantId).notifier)
+                .addColumn(newColumn);
+          }
+        },
+      ),
+    );
+  }
+
+  String _generateColumnId() {
+    return 'col_${DateTime.now().millisecondsSinceEpoch}_${Random().nextInt(9999)}';
   }
 }
