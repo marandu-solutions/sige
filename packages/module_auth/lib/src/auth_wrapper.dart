@@ -1,47 +1,34 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:module_auth/login_screen.dart';
 import 'package:module_auth/src/auth_service.dart';
-import 'package:provider/provider.dart';
 
-class AuthWrapper extends StatefulWidget {
+class AuthWrapper extends ConsumerWidget {
   const AuthWrapper({super.key});
 
   @override
-  State<AuthWrapper> createState() => _AuthWrapperState();
-}
+  Widget build(BuildContext context, WidgetRef ref) {
+    final authService = ref.watch(authServiceProvider);
 
-class _AuthWrapperState extends State<AuthWrapper> {
-  AuthStatus? _lastStatus;
-
-  @override
-  void didChangeDependencies() {
-    super.didChangeDependencies();
-    final authService = context.watch<AuthService>();
-    print(
-        'AuthWrapper: Reconstruído com status: ${authService.status}, userData: ${authService.userData != null}');
-    if (authService.status == AuthStatus.authenticated &&
-        authService.userData != null &&
-        _lastStatus != AuthStatus.authenticated) {
-      _lastStatus = AuthStatus.authenticated;
-      print('AuthWrapper: Navegando para /homepage');
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        Navigator.pushReplacementNamed(context, '/homepage', arguments: {
-          'userData': authService.userData,
-          'tenantData': authService.tenantData,
+    ref.listen(authServiceProvider, (previous, next) {
+      if (next.status == AuthStatus.authenticated && next.userData != null) {
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          Navigator.pushReplacementNamed(context, '/homepage', arguments: {
+            'userData': next.userData,
+            'tenantData': next.tenantData,
+          });
         });
-      });
-    } else {
-      _lastStatus = authService.status;
-    }
-  }
+      }
+    });
 
-  @override
-  Widget build(BuildContext context) {
-    final authService = context.watch<AuthService>();
-    if (authService.status != AuthStatus.authenticated) {
+    if (authService.status == AuthStatus.authenticated) {
+      return const Scaffold(
+        body: Center(
+          child: CircularProgressIndicator(),
+        ),
+      );
+    } else {
       return const LoginScreen();
     }
-    // Enquanto navega, retorna um widget vazio
-    return const SizedBox.shrink();
   }
 }

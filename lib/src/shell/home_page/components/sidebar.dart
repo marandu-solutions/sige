@@ -110,6 +110,7 @@ class Sidebar extends StatelessWidget {
         selected: isSelected,
         selectedTileColor: cs.primary.withOpacity(0.1),
         selectedColor: cs.primary,
+        onTap: () => onItemSelected(index),
       ),
     );
   }

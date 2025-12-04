@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:lucide_icons/lucide_icons.dart';
-import 'package:provider/provider.dart';
 import 'package:module_auth/src/auth_service.dart';
 
 // O widget do logo, mantido no mesmo arquivo para simplicidade.
@@ -39,14 +39,14 @@ class MaranduLogo extends StatelessWidget {
       '#${color.value.toRadixString(16).substring(2)}';
 }
 
-class LoginScreen extends StatefulWidget {
+class LoginScreen extends ConsumerStatefulWidget {
   const LoginScreen({super.key});
 
   @override
-  State<LoginScreen> createState() => _LoginScreenState();
+  ConsumerState<LoginScreen> createState() => _LoginScreenState();
 }
 
-class _LoginScreenState extends State<LoginScreen> {
+class _LoginScreenState extends ConsumerState<LoginScreen> {
   final TextEditingController _emailController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
   final _formKey = GlobalKey<FormState>();
@@ -62,7 +62,7 @@ class _LoginScreenState extends State<LoginScreen> {
   Future<void> _handleLogin() async {
     if (!_formKey.currentState!.validate()) return;
 
-    final authService = context.read<AuthService>();
+    final authService = ref.read(authServiceProvider);
 
     final success = await authService.signIn(
       email: _emailController.text.trim(),
@@ -82,7 +82,7 @@ class _LoginScreenState extends State<LoginScreen> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final authService = context.watch<AuthService>();
+    final authService = ref.watch(authServiceProvider);
     final isLoading = authService.status == AuthStatus.authenticating;
 
     return Scaffold(
