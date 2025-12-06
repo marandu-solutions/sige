@@ -1,3 +1,3 @@
 library module_estoque;
 
-export 'screens/stock_screen.dart';
+export 'screens/estoque_screen.dart';

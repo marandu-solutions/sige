@@ -10,6 +10,7 @@ class StockItemModel {
   final double qtdAtual;
   final String unidadeMedida;
   final double precoVenda;
+  final double nivelAlerta;
 
   StockItemModel({
     required this.id,
@@ -19,6 +20,7 @@ class StockItemModel {
     required this.qtdAtual,
     required this.unidadeMedida,
     required this.precoVenda,
+    required this.nivelAlerta,
   });
 
   /// Converte um DocumentSnapshot do Firestore para um objeto StockItemModel.
@@ -37,6 +39,7 @@ class StockItemModel {
       qtdAtual: (map['qtd_atual'] ?? 0.0).toDouble(),
       unidadeMedida: map['unidade_medida'] ?? 'UN',
       precoVenda: (map['preco_venda'] ?? 0.0).toDouble(),
+      nivelAlerta: (map['nivel_alerta'] ?? 0.0).toDouble(),
     );
   }
 
@@ -49,6 +52,7 @@ class StockItemModel {
       'qtd_atual': qtdAtual,
       'unidade_medida': unidadeMedida,
       'preco_venda': precoVenda,
+      'nivel_alerta': nivelAlerta,
     };
   }
 
@@ -61,6 +65,7 @@ class StockItemModel {
     double? qtdAtual,
     String? unidadeMedida,
     double? precoVenda,
+    double? nivelAlerta,
   }) {
     return StockItemModel(
       id: id ?? this.id,
@@ -70,6 +75,7 @@ class StockItemModel {
       qtdAtual: qtdAtual ?? this.qtdAtual,
       unidadeMedida: unidadeMedida ?? this.unidadeMedida,
       precoVenda: precoVenda ?? this.precoVenda,
+      nivelAlerta: nivelAlerta ?? this.nivelAlerta,
     );
   }
 
@@ -88,7 +94,8 @@ class StockItemModel {
         other.sku == sku &&
         other.qtdAtual == qtdAtual &&
         other.unidadeMedida == unidadeMedida &&
-        other.precoVenda == precoVenda;
+        other.precoVenda == precoVenda &&
+        other.nivelAlerta == nivelAlerta;
   }
 
   @override
@@ -99,6 +106,7 @@ class StockItemModel {
         sku.hashCode ^
         qtdAtual.hashCode ^
         unidadeMedida.hashCode ^
-        precoVenda.hashCode;
+        precoVenda.hashCode ^
+        nivelAlerta.hashCode;
   }
 }

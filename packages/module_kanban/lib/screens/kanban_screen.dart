@@ -5,6 +5,7 @@ import 'package:module_kanban/providers/kanban_provider.dart';
 import 'package:module_kanban/widgets/add_edit_kanban_column_dialog.dart';
 import 'package:module_kanban/widgets/kanban_column.dart';
 import 'package:module_kanban/widgets/add_kanban_card_dialog.dart';
+import 'package:module_kanban/widgets/move_cards_and_delete_column_dialog.dart';
 import 'package:lucide_icons/lucide_icons.dart';
 import 'dart:math';
 
@@ -188,11 +189,85 @@ class _KanbanScreenState extends ConsumerState<KanbanScreen> {
                 .addColumn(newColumn);
           }
         },
+        onDelete: column != null
+            ? () => _handleDeleteColumn(context, ref, column)
+            : null,
       ),
     );
   }
 
   String _generateColumnId() {
     return 'col_${DateTime.now().millisecondsSinceEpoch}_${Random().nextInt(9999)}';
+  }
+
+  void _handleDeleteColumn(
+      BuildContext context, WidgetRef ref, KanbanColumnModel column) {
+    final board = ref.read(kanbanProvider(widget.tenantId)).valueOrNull;
+    if (board == null) return;
+
+    final cardsInColumn =
+        board.cards.where((card) => card.colunaStatus == column.id).toList();
+    final otherColumns = board.columns.where((c) => c.id != column.id).toList();
+
+    if (cardsInColumn.isEmpty) {
+      // Caso 1: Coluna vazia, apenas confirmação simples
+      showDialog(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: const Text('Excluir Coluna?'),
+          content: Text(
+              'Você tem certeza que deseja excluir a coluna "${column.title}"? Esta ação não pode ser desfeita.'),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('Cancelar'),
+            ),
+            TextButton(
+              onPressed: () {
+                ref
+                    .read(kanbanProvider(widget.tenantId).notifier)
+                    .deleteColumn(column.id);
+                Navigator.pop(context);
+              },
+              child: const Text('Excluir', style: TextStyle(color: Colors.red)),
+            ),
+          ],
+        ),
+      );
+    } else {
+      // Caso 2: Coluna com cards, pede para mover
+      if (otherColumns.isEmpty) {
+        // Não há outras colunas para mover os cards
+        showDialog(
+          context: context,
+          builder: (context) => AlertDialog(
+            title: const Text('Não é possível excluir'),
+            content: const Text(
+                'Você não pode excluir esta coluna porque ela contém cards e não há outra coluna para movê-los. Crie outra coluna primeiro.'),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: const Text('OK'),
+              ),
+            ],
+          ),
+        );
+        return;
+      }
+
+      showDialog(
+        context: context,
+        builder: (context) => MoveCardsAndDeleteColumnDialog(
+          columnToDelete: column,
+          cardsCount: cardsInColumn.length,
+          otherColumns: otherColumns,
+          onConfirm: (targetColumnId) {
+            ref
+                .read(kanbanProvider(widget.tenantId).notifier)
+                .deleteColumn(column.id, targetColumnId: targetColumnId);
+          },
+        ),
+      );
+    }
   }
 }

@@ -1,46 +1,57 @@
-import 'package:flutter/material.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:module_estoque/models/stock_item_model.dart';
+import 'package:riverpod_annotation/riverpod_annotation.dart';
 
-/// Provider para gerenciar o estado do estoque
-final stockProvider =
-    StateNotifierProvider<StockNotifier, AsyncValue<List<StockItemModel>>>(
-        (ref) {
-  return StockNotifier();
-});
+import '../models/stock_item_model.dart';
+import '../services/stock_service.dart';
 
-/// Notifier para gerenciar operações de estoque
-class StockNotifier extends StateNotifier<AsyncValue<List<StockItemModel>>> {
-  StockNotifier() : super(const AsyncValue.loading());
+part 'stock_provider.g.dart';
 
-  /// Carrega itens do estoque para um tenant específico
-  Future<void> loadStockItems(String tenantId) async {
-    state = const AsyncValue.loading();
-    try {
-      // Implementar busca no Firestore
-      state = const AsyncValue.data([]);
-    } catch (error, stackTrace) {
-      state = AsyncValue.error(error, stackTrace);
-    }
+/// Provider for the StockService dependency.
+@riverpod
+StockService stockService(StockServiceRef ref) {
+  return StockService();
+}
+
+/// The main provider for the stock state, using a family to pass the tenantId.
+///
+/// This provider will manage the state of the stock items list (`AsyncValue<List<StockItemModel>>`).
+@riverpod
+class Stock extends _$Stock {
+  /// The build method is responsible for fetching the initial list of items.
+  /// It will be called automatically when the provider is first read,
+  /// and will be re-executed if the `tenantId` changes or if the provider is invalidated.
+  @override
+  Future<List<StockItemModel>> build(String tenantId) async {
+    return ref.watch(stockServiceProvider).loadStockItems(tenantId);
   }
 
-  /// Adiciona novo item ao estoque
-  Future<void> addStockItem(StockItemModel item) async {
-    state.whenData((currentItems) {
-      state = AsyncValue.data([...currentItems, item]);
-    });
+  /// Adds a new item to the stock.
+  ///
+  /// After adding the item to the backend via [StockService], it invalidates
+  /// the provider to trigger a refetch of the entire list, ensuring UI consistency.
+  Future<void> addItem(StockItemModel item) async {
+    // `arg` is the tenantId passed to the family provider.
+    await ref.read(stockServiceProvider).addStockItem(tenantId, item);
+    // Invalidate the provider to re-run the build method and get the fresh list.
+    ref.invalidateSelf();
+    // By awaiting `future`, we ensure the caller can wait until the state is updated.
+    await future;
   }
 
-  /// Atualiza quantidade de um item
-  Future<void> updateQuantity(String itemId, double newQuantity) async {
-    state.whenData((currentItems) {
-      final updatedItems = currentItems.map((item) {
-        if (item.id == itemId) {
-          return item.copyWith(qtdAtual: newQuantity);
-        }
-        return item;
-      }).toList();
-      state = AsyncValue.data(updatedItems);
-    });
+  /// Updates an existing item in the stock.
+  ///
+  /// Similar to `addItem`, it invalidates the provider to trigger a refetch.
+  Future<void> updateItem(StockItemModel item) async {
+    await ref.read(stockServiceProvider).updateStockItem(tenantId, item);
+    ref.invalidateSelf();
+    await future;
+  }
+
+  /// Deletes an item from the stock.
+  ///
+  /// After deleting the item, it invalidates the provider to get the updated list.
+  Future<void> deleteItem(String itemId) async {
+    await ref.read(stockServiceProvider).deleteStockItem(tenantId, itemId);
+    ref.invalidateSelf();
+    await future;
   }
 }

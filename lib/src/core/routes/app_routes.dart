@@ -14,9 +14,10 @@ class AppRoutes {
   static const String kanban = '/kanban';
 
   // Mapa de módulos disponíveis
+  // Mapa de módulos disponíveis
   static Map<String, Widget> modulosDisponiveis(String tenantId) => {
     'module_basic_dashboard': const DashboardScreen(),
-    'module_estoque': StockScreen(tenantId: tenantId),
+    'module_estoque': EstoqueScreen(tenantId: tenantId),
     'module_kanban': KanbanScreen(tenantId: tenantId),
   };
 
@@ -38,7 +39,7 @@ class AppRoutes {
       case estoque:
         if (args != null && args.containsKey('tenantId')) {
           return MaterialPageRoute(
-            builder: (_) => StockScreen(tenantId: args['tenantId']),
+            builder: (_) => EstoqueScreen(tenantId: args['tenantId']),
           );
         }
         return _errorRoute(settings.name);

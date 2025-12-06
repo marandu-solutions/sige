@@ -7,13 +7,11 @@ import 'package:intl/intl.dart';
 class KanbanCardWidget extends StatelessWidget {
   final KanbanCardModel card;
   final Color color;
-  final Function(String) onMove;
 
   const KanbanCardWidget({
     super.key,
     required this.card,
     required this.color,
-    required this.onMove,
   });
 
   @override
@@ -25,7 +23,34 @@ class KanbanCardWidget extends StatelessWidget {
     final daysUntilDue = card.dataLimite.difference(DateTime.now()).inDays;
     final isOverdue = daysUntilDue < 0;
 
-    return Card(
+    return Draggable<KanbanCardModel>(
+      data: card,
+      feedback: Material(
+        elevation: 4.0,
+        color: Colors.transparent,
+        borderRadius: BorderRadius.circular(12),
+        child: SizedBox(
+          width: 300,
+          child: KanbanCardWidget(
+            card: card,
+            color: color,
+          ),
+        ),
+      ),
+      childWhenDragging: Opacity(
+        opacity: 0.5,
+        child: Card(
+          margin: const EdgeInsets.only(bottom: 8),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+          ),
+          child: Container(
+            height: 120, // Altura aproximada do card
+            padding: const EdgeInsets.all(12),
+          ),
+        ),
+      ),
+      child: Card(
       elevation: 2,
       margin: const EdgeInsets.only(bottom: 8),
       shape: RoundedRectangleBorder(
@@ -111,25 +136,8 @@ class KanbanCardWidget extends StatelessWidget {
               const SizedBox(height: 8),
               // Ações
               Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                mainAxisAlignment: MainAxisAlignment.end,
                 children: [
-                  // Botões de mover
-                  Row(
-                    children: [
-                      if (card.colunaStatus != 'to_do')
-                        IconButton(
-                          icon: const Icon(LucideIcons.arrowLeft, size: 16),
-                          onPressed: () => _moveToPreviousColumn(),
-                          tooltip: 'Mover para coluna anterior',
-                        ),
-                      if (card.colunaStatus != 'done')
-                        IconButton(
-                          icon: const Icon(LucideIcons.arrowRight, size: 16),
-                          onPressed: () => _moveToNextColumn(),
-                          tooltip: 'Mover para próxima coluna',
-                        ),
-                    ],
-                  ),
                   // Menu de opções
                   PopupMenuButton<String>(
                     icon: const Icon(LucideIcons.moreVertical, size: 16),
@@ -174,7 +182,7 @@ class KanbanCardWidget extends StatelessWidget {
           ),
         ),
       ),
-    );
+    ));
   }
 
   Color _getPriorityColor(ColorScheme colorScheme) {
@@ -201,36 +209,6 @@ class KanbanCardWidget extends StatelessWidget {
       default:
         return card.prioridade.toUpperCase();
     }
-  }
-
-  void _moveToPreviousColumn() {
-    String newColumn;
-    switch (card.colunaStatus) {
-      case 'in_progress':
-        newColumn = 'to_do';
-        break;
-      case 'done':
-        newColumn = 'in_progress';
-        break;
-      default:
-        return;
-    }
-    onMove(newColumn);
-  }
-
-  void _moveToNextColumn() {
-    String newColumn;
-    switch (card.colunaStatus) {
-      case 'to_do':
-        newColumn = 'in_progress';
-        break;
-      case 'in_progress':
-        newColumn = 'done';
-        break;
-      default:
-        return;
-    }
-    onMove(newColumn);
   }
 
   void _showCardDetails(BuildContext context) {

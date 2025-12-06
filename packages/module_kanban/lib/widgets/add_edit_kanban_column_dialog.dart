@@ -5,8 +5,10 @@ import 'package:module_kanban/models/kanban_column_model.dart';
 class AddEditKanbanColumnDialog extends StatefulWidget {
   final KanbanColumnModel? column;
   final Function(String title, Color color) onSave;
+  final VoidCallback? onDelete;
 
-  const AddEditKanbanColumnDialog({super.key, this.column, required this.onSave});
+  const AddEditKanbanColumnDialog(
+      {super.key, this.column, required this.onSave, this.onDelete});
 
   @override
   State<AddEditKanbanColumnDialog> createState() =>
@@ -88,6 +90,16 @@ class _AddEditKanbanColumnDialogState extends State<AddEditKanbanColumnDialog> {
         ],
       ),
       actions: [
+        if (widget.column != null)
+          TextButton(
+            onPressed: () {
+              if (widget.onDelete != null) {
+                Navigator.of(context).pop();
+                widget.onDelete!();
+              }
+            },
+            child: const Text('Excluir', style: TextStyle(color: Colors.red)),
+          ),
         TextButton(
           onPressed: () => Navigator.of(context).pop(),
           child: const Text('Cancelar'),

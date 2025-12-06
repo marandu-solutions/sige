@@ -23,6 +23,7 @@ class _AddStockItemDialogState extends State<AddStockItemDialog> {
   final _skuController = TextEditingController();
   final _quantidadeController = TextEditingController();
   final _precoController = TextEditingController();
+  final _nivelAlertaController = TextEditingController();
   String _unidadeMedida = 'UN';
 
   @override
@@ -31,6 +32,7 @@ class _AddStockItemDialogState extends State<AddStockItemDialog> {
     _skuController.dispose();
     _quantidadeController.dispose();
     _precoController.dispose();
+    _nivelAlertaController.dispose();
     super.dispose();
   }
 
@@ -138,6 +140,24 @@ class _AddStockItemDialogState extends State<AddStockItemDialog> {
                   return null;
                 },
               ),
+              const SizedBox(height: 16),
+              TextFormField(
+                controller: _nivelAlertaController,
+                decoration: InputDecoration(
+                  labelText: 'Nível de Alerta',
+                  prefixIcon: const Icon(LucideIcons.alertTriangle),
+                ),
+                keyboardType: TextInputType.numberWithOptions(decimal: true),
+                validator: (value) {
+                  if (value == null || value.isEmpty) {
+                    return 'Por favor, insira o nível de alerta';
+                  }
+                  if (double.tryParse(value) == null) {
+                    return 'Nível de alerta inválido';
+                  }
+                  return null;
+                },
+              ),
             ],
           ),
         ),
@@ -170,6 +190,7 @@ class _AddStockItemDialogState extends State<AddStockItemDialog> {
         qtdAtual: double.parse(_quantidadeController.text),
         unidadeMedida: _unidadeMedida,
         precoVenda: double.parse(_precoController.text.replaceAll(',', '.')),
+        nivelAlerta: double.parse(_nivelAlertaController.text),
       );
 
       widget.onSave(newItem);

@@ -27,6 +27,7 @@ class KanbanColumn extends StatefulWidget {
 class _KanbanColumnState extends State<KanbanColumn>
     with SingleTickerProviderStateMixin {
   bool _isHovering = false;
+  bool _isCardDraggingOver = false;
   late AnimationController _animationController;
   late Animation<Offset> _offsetAnimation;
 
@@ -67,151 +68,172 @@ class _KanbanColumnState extends State<KanbanColumn>
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
 
-    return MouseRegion(
-      onEnter: (_) => _handleHover(true),
-      onExit: (_) => _handleHover(false),
-      child: Stack(
-        clipBehavior: Clip.none,
-        children: [
-          Container(
-            margin: const EdgeInsets.all(8),
-            decoration: BoxDecoration(
-              color: widget.column.color.withOpacity(0.05),
-              borderRadius: BorderRadius.circular(16),
-              border: Border.all(
-                color: widget.column.color.withOpacity(0.2),
-                width: 1,
+    return DragTarget<KanbanCardModel>(onWillAccept: (card) {
+      if (card == null) return false;
+      setState(() {
+        _isCardDraggingOver = true;
+      });
+      return card.colunaStatus != widget.column.id;
+    }, onLeave: (card) {
+      setState(() {
+        _isCardDraggingOver = false;
+      });
+    }, onAccept: (card) {
+      widget.onCardMove(card.id, widget.column.id);
+      setState(() {
+        _isCardDraggingOver = false;
+      });
+    }, builder: (context, candidateData, rejectedData) {
+      return MouseRegion(
+        onEnter: (_) => _handleHover(true),
+        onExit: (_) => _handleHover(false),
+        child: Stack(
+          clipBehavior: Clip.none,
+          children: [
+            Container(
+              margin: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: _isCardDraggingOver
+                    ? widget.column.color.withOpacity(0.15)
+                    : widget.column.color.withOpacity(0.05),
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(
+                  color: _isCardDraggingOver
+                      ? widget.column.color
+                      : widget.column.color.withOpacity(0.2),
+                  width: _isCardDraggingOver ? 2 : 1,
+                ),
+              ),
+              child: Column(
+                children: [
+                  // Cabeçalho da coluna
+                  Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      color: _isHovering
+                          ? widget.column.color.withOpacity(0.2)
+                          : widget.column.color.withOpacity(0.1),
+                      borderRadius:
+                          const BorderRadius.vertical(top: Radius.circular(16)),
+                    ),
+                    child: Row(
+                      children: [
+                        Container(
+                          width: 12,
+                          height: 12,
+                          decoration: BoxDecoration(
+                            color: widget.column.color,
+                            shape: BoxShape.circle,
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Text(
+                            widget.column.title,
+                            style: Theme.of(context)
+                                .textTheme
+                                .titleMedium
+                                ?.copyWith(
+                                  fontWeight: FontWeight.bold,
+                                  color: colorScheme.onSurface,
+                                ),
+                          ),
+                        ),
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 8, vertical: 4),
+                          decoration: BoxDecoration(
+                            color: colorScheme.surface,
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: Text(
+                            widget.cards.length.toString(),
+                            style:
+                                Theme.of(context).textTheme.bodySmall?.copyWith(
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                          ),
+                        ),
+                        IconButton(
+                          icon: const Icon(LucideIcons.edit, size: 16),
+                          onPressed: widget.onEdit,
+                        ),
+                      ],
+                    ),
+                  ),
+                  // Lista de cartões
+                  Expanded(
+                    child: widget.cards.isEmpty
+                        ? Center(
+                            child: Column(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Icon(
+                                  LucideIcons.clipboard,
+                                  size: 48,
+                                  color: colorScheme.outline.withOpacity(0.5),
+                                ),
+                                const SizedBox(height: 8),
+                                Text(
+                                  'Nenhum cartão',
+                                  style: Theme.of(context)
+                                      .textTheme
+                                      .bodyMedium
+                                      ?.copyWith(
+                                        color: colorScheme.outline
+                                            .withOpacity(0.6),
+                                      ),
+                                ),
+                              ],
+                            ),
+                          )
+                        : ListView.builder(
+                            padding: const EdgeInsets.all(8),
+                            itemCount: widget.cards.length,
+                            itemBuilder: (context, index) {
+                              return KanbanCardWidget(
+                                card: widget.cards[index],
+                                color: widget.column.color,
+                              );
+                            },
+                          ),
+                  ),
+                ],
               ),
             ),
-            child: Column(
-              children: [
-                // Cabeçalho da coluna
-                Container(
-                  width: double.infinity,
-                  padding: const EdgeInsets.all(16),
-                  decoration: BoxDecoration(
-                    color: _isHovering
-                        ? widget.column.color.withOpacity(0.2)
-                        : widget.column.color.withOpacity(0.1),
-                    borderRadius:
-                        const BorderRadius.vertical(top: Radius.circular(16)),
-                  ),
-                  child: Row(
-                    children: [
-                      Container(
-                        width: 12,
-                        height: 12,
+            Positioned(
+              top: -4,
+              left: 0,
+              right: 0,
+              child: Center(
+                child: SlideTransition(
+                  position: _offsetAnimation,
+                  child: ReorderableDragStartListener(
+                    index: widget.columnIndex,
+                    child: MouseRegion(
+                      cursor: SystemMouseCursors.grab,
+                      child: Container(
                         decoration: BoxDecoration(
-                          color: widget.column.color,
-                          shape: BoxShape.circle,
+                          color: colorScheme.surfaceVariant,
+                          borderRadius: BorderRadius.circular(8),
+                          boxShadow: kElevationToShadow[1],
                         ),
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: Text(
-                          widget.column.title,
-                          style:
-                              Theme.of(context).textTheme.titleMedium?.copyWith(
-                                    fontWeight: FontWeight.bold,
-                                    color: colorScheme.onSurface,
-                                  ),
-                        ),
-                      ),
-                      Container(
                         padding: const EdgeInsets.symmetric(
-                            horizontal: 8, vertical: 4),
-                        decoration: BoxDecoration(
-                          color: colorScheme.surface,
-                          borderRadius: BorderRadius.circular(12),
+                            horizontal: 12, vertical: 4),
+                        child: const Icon(
+                          LucideIcons.gripHorizontal,
+                          size: 20,
                         ),
-                        child: Text(
-                          widget.cards.length.toString(),
-                          style:
-                              Theme.of(context).textTheme.bodySmall?.copyWith(
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                        ),
-                      ),
-                      IconButton(
-                        icon: const Icon(LucideIcons.edit, size: 16),
-                        onPressed: widget.onEdit,
-                      ),
-                    ],
-                  ),
-                ),
-                // Lista de cartões
-                Expanded(
-                  child: widget.cards.isEmpty
-                      ? Center(
-                          child: Column(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              Icon(
-                                LucideIcons.clipboard,
-                                size: 48,
-                                color: colorScheme.outline.withOpacity(0.5),
-                              ),
-                              const SizedBox(height: 8),
-                              Text(
-                                'Nenhum cartão',
-                                style: Theme.of(context)
-                                    .textTheme
-                                    .bodyMedium
-                                    ?.copyWith(
-                                      color:
-                                          colorScheme.outline.withOpacity(0.6),
-                                    ),
-                              ),
-                            ],
-                          ),
-                        )
-                      : ListView.builder(
-                          padding: const EdgeInsets.all(8),
-                          itemCount: widget.cards.length,
-                          itemBuilder: (context, index) {
-                            return KanbanCardWidget(
-                              card: widget.cards[index],
-                              onMove: (newColumn) => widget.onCardMove(
-                                  widget.cards[index].id, newColumn),
-                              color: widget.column.color,
-                            );
-                          },
-                        ),
-                ),
-              ],
-            ),
-          ),
-          Positioned(
-            top: -4,
-            left: 0,
-            right: 0,
-            child: Center(
-              child: SlideTransition(
-                position: _offsetAnimation,
-                child: ReorderableDragStartListener(
-                  index: widget.columnIndex,
-                  child: MouseRegion(
-                    cursor: SystemMouseCursors.grab,
-                    child: Container(
-                      decoration: BoxDecoration(
-                        color: colorScheme.surfaceVariant,
-                        borderRadius: BorderRadius.circular(8),
-                        boxShadow: kElevationToShadow[1],
-                      ),
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 12, vertical: 4),
-                      child: const Icon(
-                        LucideIcons.gripHorizontal,
-                        size: 20,
                       ),
                     ),
                   ),
                 ),
               ),
             ),
-          ),
-        ],
-      ),
-    );
+          ],
+        ),
+      );
+    });
   }
 }

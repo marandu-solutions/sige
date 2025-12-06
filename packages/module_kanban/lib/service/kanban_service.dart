@@ -15,9 +15,11 @@ class KanbanService {
 
   // Coleções
   CollectionReference<KanbanCardModel> _cardsRef(String tenantId) => _firestore
-      .collection('tenants')
+      .collection('tenant')
       .doc(tenantId)
-      .collection('kanban_cards')
+      .collection('kanban')
+      .doc('board')
+      .collection('cards')
       .withConverter<KanbanCardModel>(
         fromFirestore: (snapshot, _) => KanbanCardModel.fromFirestore(snapshot),
         toFirestore: (card, _) => card.toMap(),
@@ -25,9 +27,11 @@ class KanbanService {
 
   CollectionReference<KanbanColumnModel> _columnsRef(String tenantId) =>
       _firestore
-          .collection('tenants')
+          .collection('tenant')
           .doc(tenantId)
-          .collection('kanban_columns')
+          .collection('kanban')
+          .doc('board')
+          .collection('columns')
           .withConverter<KanbanColumnModel>(
             fromFirestore: (snapshot, _) =>
                 KanbanColumnModel.fromFirestore(snapshot),
@@ -50,7 +54,7 @@ class KanbanService {
   Future<List<KanbanColumnModel>> getColumns(String tenantId) async {
     final snapshot = await _columnsRef(tenantId).orderBy('order').get();
     if (snapshot.docs.isEmpty) {
-      return _createDefaultColumns(tenantId);
+      return [];
     }
     return snapshot.docs.map((doc) => doc.data()).toList();
   }
@@ -74,36 +78,30 @@ class KanbanService {
     await batch.commit();
   }
 
-  Future<List<KanbanColumnModel>> _createDefaultColumns(String tenantId) async {
-    final defaultColumns = [
-      KanbanColumnModel(
-          id: 'to_do',
-          tenantId: tenantId,
-          title: 'A Fazer',
-          colorValue: 4282683647,
-          order: 0),
-      KanbanColumnModel(
-          id: 'in_progress',
-          tenantId: tenantId,
-          title: 'Em Progresso',
-          colorValue: 4294967295,
-          order: 1),
-      KanbanColumnModel(
-          id: 'done',
-          tenantId: tenantId,
-          title: 'Concluído',
-          colorValue: 4278233599,
-          order: 2),
-    ];
+  Future<void> deleteColumn(String tenantId, String columnId) async {
+    await _columnsRef(tenantId).doc(columnId).delete();
+  }
 
-    final batch = _firestore.batch();
-    for (var column in defaultColumns) {
-      final docRef = _columnsRef(tenantId).doc(column.id);
-      batch.set(docRef, column);
+  Future<void> deleteColumnAndMoveCards(
+      String tenantId, String columnIdToDelete, String targetColumnId) async {
+    final WriteBatch batch = _firestore.batch();
+
+    // 1. Pega os cards da coluna a ser excluída
+    final cardsSnapshot = await _cardsRef(tenantId)
+        .where('coluna_status', isEqualTo: columnIdToDelete)
+        .get();
+
+    // 2. Atualiza cada card para a nova coluna
+    for (final doc in cardsSnapshot.docs) {
+      batch.update(doc.reference, {'coluna_status': targetColumnId});
     }
-    await batch.commit();
 
-    return defaultColumns;
+    // 3. Deleta a coluna
+    final columnRef = _columnsRef(tenantId).doc(columnIdToDelete);
+    batch.delete(columnRef);
+
+    // 4. Commita o batch
+    await batch.commit();
   }
 
   // Operações de Cartão
