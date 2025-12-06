@@ -46,6 +46,8 @@ dependencies:
     path: packages/module_estoque
   module_kanban:
     path: packages/module_kanban
+  module_atendimento:
+    path: packages/module_atendimento
 
 
   provider: ^6.1.5+1

@@ -1,29 +1,30 @@
 import 'dart:async';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:module_kanban/models/kanban_board_model.dart';
-import 'package:module_kanban/models/kanban_card_model.dart';
-import 'package:module_kanban/models/kanban_column_model.dart';
-import 'package:module_kanban/service/kanban_service.dart';
+import 'package:module_atendimento/models/atendimento_board_model.dart';
+import 'package:module_atendimento/models/atendimento_card_model.dart';
+import 'package:module_atendimento/models/atendimento_column_model.dart';
+import 'package:module_atendimento/models/mensagem_model.dart';
+import 'package:module_atendimento/services/atendimento_service.dart';
 
-final kanbanProvider = AsyncNotifierProvider.autoDispose
-    .family<KanbanNotifier, KanbanBoardModel, String>(() {
-  return KanbanNotifier();
+final atendimentoProvider = AsyncNotifierProvider.family<AtendimentoNotifier,
+    AtendimentoBoardModel, String>(() {
+  return AtendimentoNotifier();
 });
 
-class KanbanNotifier
-    extends AutoDisposeFamilyAsyncNotifier<KanbanBoardModel, String> {
+class AtendimentoNotifier
+    extends FamilyAsyncNotifier<AtendimentoBoardModel, String> {
   @override
-  FutureOr<KanbanBoardModel> build(String tenantId) {
+  FutureOr<AtendimentoBoardModel> build(String tenantId) {
     return _getBoard(tenantId);
   }
 
-  Future<KanbanBoardModel> _getBoard(String tenantId) {
-    final kanbanService = ref.read(kanbanServiceProvider);
-    return kanbanService.getBoard(tenantId);
+  Future<AtendimentoBoardModel> _getBoard(String tenantId) {
+    final atendimentoService = ref.read(atendimentoServiceProvider);
+    return atendimentoService.getBoard(tenantId);
   }
 
-  Future<void> addCard(KanbanCardModel card) async {
-    final kanbanService = ref.read(kanbanServiceProvider);
+  Future<void> addCard(AtendimentoCardModel card) async {
+    final atendimentoService = ref.read(atendimentoServiceProvider);
 
     // Atualiza o estado localmente sem loading
     final currentBoard = state.valueOrNull;
@@ -34,7 +35,7 @@ class KanbanNotifier
 
     // Atualiza no Firebase em background
     try {
-      await kanbanService.addCard(card);
+      await atendimentoService.addCard(card);
     } catch (e) {
       // Se houver erro, recarrega o board completo
       state = await AsyncValue.guard(() => _getBoard(card.tenantId));
@@ -42,7 +43,7 @@ class KanbanNotifier
   }
 
   Future<void> moveCard(String cardId, String newColumn) async {
-    final kanbanService = ref.read(kanbanServiceProvider);
+    final atendimentoService = ref.read(atendimentoServiceProvider);
     final tenantId = arg;
 
     // Atualiza o estado localmente sem loading
@@ -60,7 +61,7 @@ class KanbanNotifier
 
     // Atualiza no Firebase em background
     try {
-      await kanbanService.updateCardStatus(tenantId, cardId, newColumn);
+      await atendimentoService.updateCardStatus(tenantId, cardId, newColumn);
     } catch (e) {
       // Se houver erro, recarrega o board completo
       state = await AsyncValue.guard(() => _getBoard(tenantId));
@@ -68,7 +69,7 @@ class KanbanNotifier
   }
 
   Future<void> updatePriority(String cardId, String newPriority) async {
-    final kanbanService = ref.read(kanbanServiceProvider);
+    final atendimentoService = ref.read(atendimentoServiceProvider);
     final tenantId = arg;
 
     // Atualiza o estado localmente sem loading
@@ -86,15 +87,16 @@ class KanbanNotifier
 
     // Atualiza no Firebase em background
     try {
-      await kanbanService.updateCardPriority(tenantId, cardId, newPriority);
+      await atendimentoService.updateCardPriority(
+          tenantId, cardId, newPriority);
     } catch (e) {
       // Se houver erro, recarrega o board completo
       state = await AsyncValue.guard(() => _getBoard(tenantId));
     }
   }
 
-  Future<void> addColumn(KanbanColumnModel column) async {
-    final kanbanService = ref.read(kanbanServiceProvider);
+  Future<void> addColumn(AtendimentoColumnModel column) async {
+    final atendimentoService = ref.read(atendimentoServiceProvider);
 
     // Atualiza o estado localmente sem loading
     final currentBoard = state.valueOrNull;
@@ -105,15 +107,15 @@ class KanbanNotifier
 
     // Atualiza no Firebase em background
     try {
-      await kanbanService.addColumn(column);
+      await atendimentoService.addColumn(column);
     } catch (e) {
       // Se houver erro, recarrega o board completo
       state = await AsyncValue.guard(() => _getBoard(column.tenantId));
     }
   }
 
-  Future<void> updateColumn(KanbanColumnModel column) async {
-    final kanbanService = ref.read(kanbanServiceProvider);
+  Future<void> updateColumn(AtendimentoColumnModel column) async {
+    final atendimentoService = ref.read(atendimentoServiceProvider);
 
     // Atualiza o estado localmente sem loading
     final currentBoard = state.valueOrNull;
@@ -124,33 +126,30 @@ class KanbanNotifier
         }
         return col;
       }).toList();
+
       state = AsyncValue.data(currentBoard.copyWith(columns: updatedColumns));
     }
 
     // Atualiza no Firebase em background
     try {
-      await kanbanService.updateColumn(column);
+      await atendimentoService.updateColumn(column);
     } catch (e) {
       // Se houver erro, recarrega o board completo
       state = await AsyncValue.guard(() => _getBoard(column.tenantId));
     }
   }
 
-  Future<void> deleteColumn(
-    String columnId, {
-    String? targetColumnId,
-  }) async {
-    final kanbanService = ref.read(kanbanServiceProvider);
+  Future<void> deleteColumn(String columnId, {String? targetColumnId}) async {
+    final atendimentoService = ref.read(atendimentoServiceProvider);
     final tenantId = arg;
 
     // Atualiza o estado localmente sem loading
     final currentBoard = state.valueOrNull;
     if (currentBoard != null) {
-      // Remove a coluna e seus cards
-      final updatedColumns =
-          currentBoard.columns.where((col) => col.id != columnId).toList();
+      final updatedColumns = currentBoard.columns
+          .where((column) => column.id != columnId)
+          .toList();
 
-      // Se houver cards para mover, atualiza eles também
       final updatedCards = currentBoard.cards
           .map((card) {
             if (card.colunaStatus == columnId && targetColumnId != null) {
@@ -171,10 +170,10 @@ class KanbanNotifier
     // Atualiza no Firebase em background
     try {
       if (targetColumnId != null) {
-        await kanbanService.deleteColumnAndMoveCards(
+        await atendimentoService.deleteColumnAndMoveCards(
             tenantId, columnId, targetColumnId);
       } else {
-        await kanbanService.deleteColumn(tenantId, columnId);
+        await atendimentoService.deleteColumn(tenantId, columnId);
       }
     } catch (e) {
       // Se houver erro, recarrega o board completo
@@ -190,13 +189,20 @@ class KanbanNotifier
       newIndex -= 1;
     }
 
-    final columns = List<KanbanColumnModel>.from(board.columns);
+    final columns = List<AtendimentoColumnModel>.from(board.columns);
     final movedColumn = columns.removeAt(oldIndex);
     columns.insert(newIndex, movedColumn);
 
+    // Atualiza o estado localmente sem loading
     state = AsyncValue.data(board.copyWith(columns: columns));
 
-    final kanbanService = ref.read(kanbanServiceProvider);
-    await kanbanService.updateColumnsOrder(arg, columns);
+    // Atualiza no Firebase em background
+    final atendimentoService = ref.read(atendimentoServiceProvider);
+    try {
+      await atendimentoService.updateColumnsOrder(arg, columns);
+    } catch (e) {
+      // Se houver erro, recarrega o board completo
+      state = await AsyncValue.guard(() => _getBoard(arg));
+    }
   }
 }

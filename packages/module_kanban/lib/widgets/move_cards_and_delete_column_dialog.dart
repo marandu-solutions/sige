@@ -41,7 +41,8 @@ class _MoveCardsAndDeleteColumnDialogState
           Text(
               'A coluna "${widget.columnToDelete.title}" contém ${widget.cardsCount} card(s). Para excluí-la, mova os cards para outra coluna.'),
           const SizedBox(height: 20),
-          const Text('Mover cards para:', style: TextStyle(fontWeight: FontWeight.bold)),
+          const Text('Mover cards para:',
+              style: TextStyle(fontWeight: FontWeight.bold)),
           const SizedBox(height: 10),
           DropdownButtonFormField<String>(
             value: _selectedColumnId,

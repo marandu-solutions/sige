@@ -77,6 +77,11 @@ class _HomePageState extends ConsumerState<HomePage> {
         'titulo': 'Kanban',
         'icone': Icons.view_kanban,
       },
+      'module_atendimento': {
+        'rota': AppRoutes.atendimento,
+        'titulo': 'Atendimento',
+        'icone': Icons.chat,
+      },
     };
     return metadataMap[moduloNome] ?? {};
   }

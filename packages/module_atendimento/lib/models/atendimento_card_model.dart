@@ -1,0 +1,115 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
+
+/// Modelo que representa um atendimento no Kanban.
+/// Contém tenantId para garantir isolamento de dados entre empresas.
+class AtendimentoCardModel {
+  final String id;
+  final String tenantId;
+  final String titulo;
+  final String colunaStatus;
+  final String prioridade;
+  final DateTime dataLimite;
+  final String clienteNome;
+  final String clienteTelefone;
+  final String clienteEmail;
+  final DateTime dataCriacao;
+  final String ultimaMensagem;
+  final DateTime? ultimaMensagemData;
+  final int mensagensNaoLidas;
+
+  AtendimentoCardModel({
+    required this.id,
+    required this.tenantId,
+    required this.titulo,
+    required this.colunaStatus,
+    required this.prioridade,
+    required this.dataLimite,
+    required this.clienteNome,
+    required this.clienteTelefone,
+    required this.clienteEmail,
+    required this.dataCriacao,
+    this.ultimaMensagem = '',
+    this.ultimaMensagemData,
+    this.mensagensNaoLidas = 0,
+  });
+
+  /// Converte um DocumentSnapshot do Firestore para um objeto AtendimentoCardModel.
+  factory AtendimentoCardModel.fromFirestore(DocumentSnapshot doc) {
+    final data = doc.data() as Map<String, dynamic>;
+    return AtendimentoCardModel.fromMap(data, doc.id);
+  }
+
+  /// Converte um Map para AtendimentoCardModel
+  factory AtendimentoCardModel.fromMap(Map<String, dynamic> map, [String? id]) {
+    return AtendimentoCardModel(
+      id: id ?? map['id'] ?? '',
+      tenantId: map['tenant_id'] ?? '',
+      titulo: map['titulo'] ?? '',
+      colunaStatus: map['coluna_status'] ?? 'novo',
+      prioridade: map['prioridade'] ?? 'media',
+      dataLimite:
+          (map['data_limite'] as Timestamp?)?.toDate() ?? DateTime.now(),
+      clienteNome: map['cliente_nome'] ?? '',
+      clienteTelefone: map['cliente_telefone'] ?? '',
+      clienteEmail: map['cliente_email'] ?? '',
+      dataCriacao:
+          (map['data_criacao'] as Timestamp?)?.toDate() ?? DateTime.now(),
+      ultimaMensagem: map['ultima_mensagem'] ?? '',
+      ultimaMensagemData: (map['ultima_mensagem_data'] as Timestamp?)?.toDate(),
+      mensagensNaoLidas: map['mensagens_nao_lidas'] ?? 0,
+    );
+  }
+
+  /// Converte o objeto AtendimentoCardModel para um Map compatível com Firestore.
+  Map<String, dynamic> toMap() {
+    return {
+      'tenant_id': tenantId,
+      'titulo': titulo,
+      'coluna_status': colunaStatus,
+      'prioridade': prioridade,
+      'data_limite': Timestamp.fromDate(dataLimite),
+      'cliente_nome': clienteNome,
+      'cliente_telefone': clienteTelefone,
+      'cliente_email': clienteEmail,
+      'data_criacao': Timestamp.fromDate(dataCriacao),
+      'ultima_mensagem': ultimaMensagem,
+      'ultima_mensagem_data': ultimaMensagemData != null
+          ? Timestamp.fromDate(ultimaMensagemData!)
+          : null,
+      'mensagens_nao_lidas': mensagensNaoLidas,
+    };
+  }
+
+  /// Cria uma cópia do objeto com campos atualizados
+  AtendimentoCardModel copyWith({
+    String? id,
+    String? tenantId,
+    String? titulo,
+    String? colunaStatus,
+    String? prioridade,
+    DateTime? dataLimite,
+    String? clienteNome,
+    String? clienteTelefone,
+    String? clienteEmail,
+    DateTime? dataCriacao,
+    String? ultimaMensagem,
+    DateTime? ultimaMensagemData,
+    int? mensagensNaoLidas,
+  }) {
+    return AtendimentoCardModel(
+      id: id ?? this.id,
+      tenantId: tenantId ?? this.tenantId,
+      titulo: titulo ?? this.titulo,
+      colunaStatus: colunaStatus ?? this.colunaStatus,
+      prioridade: prioridade ?? this.prioridade,
+      dataLimite: dataLimite ?? this.dataLimite,
+      clienteNome: clienteNome ?? this.clienteNome,
+      clienteTelefone: clienteTelefone ?? this.clienteTelefone,
+      clienteEmail: clienteEmail ?? this.clienteEmail,
+      dataCriacao: dataCriacao ?? this.dataCriacao,
+      ultimaMensagem: ultimaMensagem ?? this.ultimaMensagem,
+      ultimaMensagemData: ultimaMensagemData ?? this.ultimaMensagemData,
+      mensagensNaoLidas: mensagensNaoLidas ?? this.mensagensNaoLidas,
+    );
+  }
+}
