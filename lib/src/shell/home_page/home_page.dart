@@ -87,6 +87,11 @@ class _HomePageState extends ConsumerState<HomePage> {
         'titulo': 'Admin',
         'icone': Icons.admin_panel_settings,
       },
+      'module_gerente_atendimento': {
+        'rota': AppRoutes.gerenteAtendimento,
+        'titulo': 'Gerente',
+        'icone': Icons.supervisor_account,
+      },
     };
     return metadataMap[moduloNome] ?? {};
   }

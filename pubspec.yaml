@@ -55,6 +55,8 @@ dependencies:
   lucide_icons: ^0.257.0
   module_admin_empresa:
     path: packages/module_admin_empresa
+  module_gerente_atendimento:
+    path: packages/module_gerente_atendimento
 
 dev_dependencies:
   flutter_test:

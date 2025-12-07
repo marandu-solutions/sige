@@ -13,8 +13,13 @@ import 'dart:math';
 
 class AtendimentoScreen extends ConsumerStatefulWidget {
   final String tenantId;
+  final String? funcionarioIdFilter;
 
-  const AtendimentoScreen({super.key, required this.tenantId});
+  const AtendimentoScreen({
+    super.key,
+    required this.tenantId,
+    this.funcionarioIdFilter,
+  });
 
   @override
   ConsumerState<AtendimentoScreen> createState() => _AtendimentoScreenState();
@@ -113,6 +118,10 @@ class _AtendimentoScreenState extends ConsumerState<AtendimentoScreen> {
                   final column = board.columns[index];
                   final columnCards = board.cards
                       .where((card) => card.colunaStatus == column.id)
+                      .where((card) =>
+                          widget.funcionarioIdFilter == null ||
+                          card.funcionarioResponsavelId ==
+                              widget.funcionarioIdFilter)
                       .toList();
 
                   return SizedBox(

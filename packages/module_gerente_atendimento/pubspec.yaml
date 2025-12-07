@@ -1,0 +1,22 @@
+name: module_gerente_atendimento
+description: Modulo para gerentes visualizarem atendimentos por funcionário.
+version: 0.0.1
+publish_to: 'none'
+
+environment:
+  sdk: '>=3.0.0 <4.0.0'
+
+dependencies:
+  flutter:
+    sdk: flutter
+  flutter_riverpod: ^2.4.9
+  lucide_icons: ^0.257.0
+  module_admin_empresa:
+    path: ../module_admin_empresa
+  module_atendimento:
+    path: ../module_atendimento
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^3.0.0

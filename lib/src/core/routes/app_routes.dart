@@ -7,6 +7,7 @@ import 'package:module_estoque/module_estoque.dart';
 import 'package:module_kanban/module_kanban.dart';
 import 'package:module_atendimento/module_atendimento.dart';
 import 'package:module_admin_empresa/src/screens/admin_dashboard_screen.dart';
+import 'package:module_gerente_atendimento/module_gerente_atendimento.dart';
 
 class AppRoutes {
   static const String homepage = '/homepage';
@@ -16,6 +17,7 @@ class AppRoutes {
   static const String kanban = '/kanban';
   static const String atendimento = '/atendimento';
   static const String adminEmpresa = '/admin_empresa';
+  static const String gerenteAtendimento = '/gerente_atendimento';
 
   // Mapa de módulos disponíveis
   // Mapa de módulos disponíveis
@@ -25,6 +27,7 @@ class AppRoutes {
     'module_kanban': KanbanScreen(tenantId: tenantId),
     'module_atendimento': AtendimentoScreen(tenantId: tenantId),
     'module_admin_empresa': AdminDashboardScreen(tenantId: tenantId),
+    'module_gerente_atendimento': GerenteAtendimentoScreen(tenantId: tenantId),
   };
 
   static Route<dynamic> generateRoute(RouteSettings settings) {
@@ -67,6 +70,14 @@ class AppRoutes {
         if (args != null && args.containsKey('tenantId')) {
           return MaterialPageRoute(
             builder: (_) => AdminDashboardScreen(tenantId: args['tenantId']),
+          );
+        }
+        return _errorRoute(settings.name);
+      case gerenteAtendimento:
+        if (args != null && args.containsKey('tenantId')) {
+          return MaterialPageRoute(
+            builder: (_) =>
+                GerenteAtendimentoScreen(tenantId: args['tenantId']),
           );
         }
         return _errorRoute(settings.name);

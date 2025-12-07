@@ -323,6 +323,13 @@ packages:
       relative: true
     source: path
     version: "1.0.0+1"
+  module_gerente_atendimento:
+    dependency: "direct main"
+    description:
+      path: "packages/module_gerente_atendimento"
+      relative: true
+    source: path
+    version: "0.0.1"
   module_kanban:
     dependency: "direct main"
     description:
