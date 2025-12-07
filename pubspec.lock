@@ -288,6 +288,13 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "1.16.0"
+  module_admin_empresa:
+    dependency: "direct main"
+    description:
+      path: "packages/module_admin_empresa"
+      relative: true
+    source: path
+    version: "0.0.1"
   module_atendimento:
     dependency: "direct main"
     description:

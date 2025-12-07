@@ -12,6 +12,12 @@ class MensagemModel {
   final String? anexoUrl;
   final String? anexoTipo;
 
+  // Campos adicionais para integração N8N
+  final String status; // 'pending_send', 'sent', 'error', etc.
+  final String? remetenteUid;
+  final String? remetenteTipo; // 'vendedor', 'sistema', 'cliente'
+  final String? telefoneDestino;
+
   MensagemModel({
     required this.id,
     required this.tenantId,
@@ -21,6 +27,11 @@ class MensagemModel {
     required this.dataEnvio,
     this.anexoUrl,
     this.anexoTipo,
+    this.status =
+        'sent', // Default para retrocompatibilidade ou mensagens recebidas
+    this.remetenteUid,
+    this.remetenteTipo,
+    this.telefoneDestino,
   });
 
   /// Converte um DocumentSnapshot do Firestore para um objeto MensagemModel.
@@ -37,22 +48,45 @@ class MensagemModel {
       atendimentoId: map['atendimento_id'] ?? '',
       texto: map['texto'] ?? '',
       isUsuario: map['is_usuario'] ?? false,
-      dataEnvio: (map['data_envio'] as Timestamp?)?.toDate() ?? DateTime.now(),
+      dataEnvio: _parseTimestamp(map['data_envio']) ??
+          _parseTimestamp(map['sent_at']) ??
+          DateTime.now(),
       anexoUrl: map['anexo_url'],
       anexoTipo: map['anexo_tipo'],
+      status: map['status'] ?? 'sent',
+      remetenteUid: map['remetente_uid'],
+      remetenteTipo: map['remetente_tipo'],
+      telefoneDestino: map['telefone_destino'],
     );
   }
 
+  static DateTime? _parseTimestamp(dynamic timestamp) {
+    if (timestamp == null) return null;
+    if (timestamp is Timestamp) return timestamp.toDate();
+    if (timestamp is String) return DateTime.tryParse(timestamp);
+    return null;
+  }
+
   /// Converte o objeto MensagemModel para um Map compatível com Firestore.
-  Map<String, dynamic> toMap() {
+  Map<String, dynamic> toMap({bool useServerTimestamp = false}) {
     return {
       'tenant_id': tenantId,
       'atendimento_id': atendimentoId,
       'texto': texto,
       'is_usuario': isUsuario,
-      'data_envio': Timestamp.fromDate(dataEnvio),
+      // Usa sent_at para compatibilidade com a Cloud Function/N8N, mas mantém data_envio para legado se necessário
+      'data_envio': useServerTimestamp
+          ? FieldValue.serverTimestamp()
+          : Timestamp.fromDate(dataEnvio),
+      'sent_at': useServerTimestamp
+          ? FieldValue.serverTimestamp()
+          : Timestamp.fromDate(dataEnvio),
       'anexo_url': anexoUrl,
       'anexo_tipo': anexoTipo,
+      'status': status,
+      'remetente_uid': remetenteUid,
+      'remetente_tipo': remetenteTipo,
+      'telefone_destino': telefoneDestino,
     };
   }
 
@@ -66,6 +100,10 @@ class MensagemModel {
     DateTime? dataEnvio,
     String? anexoUrl,
     String? anexoTipo,
+    String? status,
+    String? remetenteUid,
+    String? remetenteTipo,
+    String? telefoneDestino,
   }) {
     return MensagemModel(
       id: id ?? this.id,
@@ -76,6 +114,10 @@ class MensagemModel {
       dataEnvio: dataEnvio ?? this.dataEnvio,
       anexoUrl: anexoUrl ?? this.anexoUrl,
       anexoTipo: anexoTipo ?? this.anexoTipo,
+      status: status ?? this.status,
+      remetenteUid: remetenteUid ?? this.remetenteUid,
+      remetenteTipo: remetenteTipo ?? this.remetenteTipo,
+      telefoneDestino: telefoneDestino ?? this.telefoneDestino,
     );
   }
 }

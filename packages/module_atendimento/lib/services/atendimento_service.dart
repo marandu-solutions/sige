@@ -1,4 +1,5 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:module_atendimento/models/atendimento_board_model.dart';
 import 'package:module_atendimento/models/atendimento_card_model.dart';
@@ -41,16 +42,11 @@ class AtendimentoService {
             toFirestore: (column, _) => column.toMap(),
           );
 
-  CollectionReference<MensagemModel> _mensagensRef(
-          String tenantId, String atendimentoId) =>
+  CollectionReference<MensagemModel> _mensagensRef(String tenantId) =>
       _firestore
           .collection('tenant')
           .doc(tenantId)
-          .collection('atendimento')
-          .doc('board')
-          .collection('cards')
-          .doc(atendimentoId)
-          .collection('mensagens')
+          .collection('interactions')
           .withConverter<MensagemModel>(
             fromFirestore: (snapshot, _) =>
                 MensagemModel.fromFirestore(snapshot),
@@ -71,12 +67,25 @@ class AtendimentoService {
 
   // Operações de Cards
   Future<List<AtendimentoCardModel>> getCards(String tenantId) async {
-    final snapshot = await _cardsRef(tenantId).get();
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) return [];
+
+    // Filtra apenas os leads atribuídos ao funcionário logado
+    final snapshot = await _cardsRef(tenantId)
+        .where('funcionario_responsavel_id', isEqualTo: user.uid)
+        .get();
     return snapshot.docs.map((doc) => doc.data()).toList();
   }
 
   Future<void> addCard(AtendimentoCardModel card) async {
-    await _cardsRef(card.tenantId).add(card);
+    final user = FirebaseAuth.instance.currentUser;
+
+    // Se o card não tiver funcionário responsável, atribui ao usuário atual (caso o próprio funcionário crie)
+    final cardToSave = card.funcionarioResponsavelId == null && user != null
+        ? card.copyWith(funcionarioResponsavelId: user.uid)
+        : card;
+
+    await _cardsRef(cardToSave.tenantId).add(cardToSave);
   }
 
   Future<void> updateCard(AtendimentoCardModel card) async {
@@ -160,15 +169,15 @@ class AtendimentoService {
   // Operações de Mensagens
   Future<List<MensagemModel>> getMensagens(
       String tenantId, String atendimentoId) async {
-    final snapshot = await _mensagensRef(tenantId, atendimentoId)
+    final snapshot = await _mensagensRef(tenantId)
+        .where('atendimento_id', isEqualTo: atendimentoId)
         .orderBy('data_envio', descending: false)
         .get();
     return snapshot.docs.map((doc) => doc.data()).toList();
   }
 
   Future<void> addMensagem(MensagemModel mensagem) async {
-    await _mensagensRef(mensagem.tenantId, mensagem.atendimentoId)
-        .add(mensagem);
+    await _mensagensRef(mensagem.tenantId).add(mensagem);
 
     // Atualiza o card com a última mensagem
     await _cardsRef(mensagem.tenantId).doc(mensagem.atendimentoId).update({
@@ -183,5 +192,34 @@ class AtendimentoService {
     await _cardsRef(tenantId).doc(atendimentoId).update({
       'mensagens_nao_lidas': 0,
     });
+  }
+
+  // Envio de Mensagem para Integração (N8N)
+  Future<void> sendMessage(
+      String tenantId, String leadId, String customerPhone, String text) async {
+    try {
+      final user = FirebaseAuth.instance.currentUser;
+      if (user == null) {
+        throw Exception('Usuário não autenticado');
+      }
+
+      final mensagem = MensagemModel(
+        id: '', // Será gerado pelo Firestore
+        tenantId: tenantId,
+        atendimentoId: leadId,
+        texto: text,
+        isUsuario: true,
+        dataEnvio: DateTime.now(),
+        status: 'pending_send',
+        remetenteUid: user.uid,
+        remetenteTipo: 'vendedor',
+        telefoneDestino: customerPhone,
+      );
+
+      // Salva na coleção de interações do tenant
+      await _mensagensRef(tenantId).add(mensagem);
+    } catch (e) {
+      throw Exception('Erro ao enviar mensagem: $e');
+    }
   }
 }
