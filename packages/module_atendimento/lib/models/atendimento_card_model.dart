@@ -8,7 +8,6 @@ class AtendimentoCardModel {
   final String titulo;
   final String colunaStatus;
   final String prioridade;
-  final DateTime dataLimite;
   final String clienteNome;
   final String clienteTelefone;
   final String clienteEmail;
@@ -25,7 +24,6 @@ class AtendimentoCardModel {
     required this.titulo,
     required this.colunaStatus,
     required this.prioridade,
-    required this.dataLimite,
     required this.clienteNome,
     required this.clienteTelefone,
     required this.clienteEmail,
@@ -50,8 +48,6 @@ class AtendimentoCardModel {
       titulo: map['titulo'] ?? '',
       colunaStatus: map['coluna_status'] ?? 'novo',
       prioridade: map['prioridade'] ?? 'media',
-      dataLimite:
-          (map['data_limite'] as Timestamp?)?.toDate() ?? DateTime.now(),
       clienteNome: map['cliente_nome'] ?? '',
       clienteTelefone: map['cliente_telefone'] ?? '',
       clienteEmail: map['cliente_email'] ?? '',
@@ -71,7 +67,6 @@ class AtendimentoCardModel {
       'titulo': titulo,
       'coluna_status': colunaStatus,
       'prioridade': prioridade,
-      'data_limite': Timestamp.fromDate(dataLimite),
       'cliente_nome': clienteNome,
       'cliente_telefone': clienteTelefone,
       'cliente_email': clienteEmail,
@@ -92,7 +87,6 @@ class AtendimentoCardModel {
     String? titulo,
     String? colunaStatus,
     String? prioridade,
-    DateTime? dataLimite,
     String? clienteNome,
     String? clienteTelefone,
     String? clienteEmail,
@@ -108,7 +102,6 @@ class AtendimentoCardModel {
       titulo: titulo ?? this.titulo,
       colunaStatus: colunaStatus ?? this.colunaStatus,
       prioridade: prioridade ?? this.prioridade,
-      dataLimite: dataLimite ?? this.dataLimite,
       clienteNome: clienteNome ?? this.clienteNome,
       clienteTelefone: clienteTelefone ?? this.clienteTelefone,
       clienteEmail: clienteEmail ?? this.clienteEmail,

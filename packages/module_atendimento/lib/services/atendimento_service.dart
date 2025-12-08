@@ -31,35 +31,19 @@ class AtendimentoService {
 
   CollectionReference<AtendimentoColumnModel> _columnsRef(String tenantId) {
     final user = FirebaseAuth.instance.currentUser;
-    // Se não houver usuário logado (ex: durante logout ou inicialização), retorna a referência padrão do tenant.
-    // Mas o ideal é que cada usuário tenha suas colunas.
-    // A estrutura ideal seria: tenant/{tenantId}/users/{userId}/atendimento/board/columns
-    // Mas para manter compatibilidade com a estrutura atual (tenant/{tenantId}/atendimento/board/columns),
-    // podemos continuar usando a estrutura atual SE o requisito for um board compartilhado.
-    // O usuário disse: "o kanban é algo individual do usuário logado no sistema... mas do jeito que essa collection está no firebase eu acredito que não esteja tornando isso possivel".
-    
-    // CORREÇÃO: Para tornar individual por usuário, precisamos mudar a referência para incluir o ID do usuário.
-    if (user != null) {
-      return _firestore
-          .collection('tenant')
-          .doc(tenantId)
-          .collection('users')
-          .doc(user.uid)
-          .collection('atendimento_board_columns') // Nome da coleção de colunas pessoais
-          .withConverter<AtendimentoColumnModel>(
-            fromFirestore: (snapshot, _) =>
-                AtendimentoColumnModel.fromFirestore(snapshot),
-            toFirestore: (column, _) => column.toMap(),
-          );
+
+    // GARANTIA DE CONSISTÊNCIA: Sempre usa o board individual do usuário.
+    // Se não houver usuário logado, lança erro para evitar fallback para board compartilhado incorreto.
+    if (user == null) {
+      throw Exception('Usuário não autenticado ao acessar colunas.');
     }
-    
-    // Fallback para board compartilhado se não tiver user (não deve acontecer em uso normal)
+
     return _firestore
         .collection('tenant')
         .doc(tenantId)
-        .collection('atendimento')
-        .doc('board')
-        .collection('columns')
+        .collection('users')
+        .doc(user.uid)
+        .collection('atendimento_board_columns')
         .withConverter<AtendimentoColumnModel>(
           fromFirestore: (snapshot, _) =>
               AtendimentoColumnModel.fromFirestore(snapshot),
@@ -102,7 +86,7 @@ class AtendimentoService {
     return snapshot.docs.map((doc) => doc.data()).toList();
   }
 
-  Future<void> addCard(AtendimentoCardModel card) async {
+  Future<String> addCard(AtendimentoCardModel card) async {
     final user = FirebaseAuth.instance.currentUser;
 
     // Se o card não tiver funcionário responsável, atribui ao usuário atual (caso o próprio funcionário crie)
@@ -110,7 +94,8 @@ class AtendimentoService {
         ? card.copyWith(funcionarioResponsavelId: user.uid)
         : card;
 
-    await _cardsRef(cardToSave.tenantId).add(cardToSave);
+    final docRef = await _cardsRef(cardToSave.tenantId).add(cardToSave);
+    return docRef.id;
   }
 
   Future<void> updateCard(AtendimentoCardModel card) async {
@@ -119,6 +104,7 @@ class AtendimentoService {
 
   Future<void> updateCardStatus(
       String tenantId, String cardId, String newStatus) async {
+    // newStatus é o ID da nova coluna
     await _cardsRef(tenantId).doc(cardId).update({
       'coluna_status': newStatus,
     });
@@ -142,8 +128,9 @@ class AtendimentoService {
     return snapshot.docs.map((doc) => doc.data()).toList();
   }
 
-  Future<void> addColumn(AtendimentoColumnModel column) async {
-    await _columnsRef(column.tenantId).add(column);
+  Future<String> addColumn(AtendimentoColumnModel column) async {
+    final docRef = await _columnsRef(column.tenantId).add(column);
+    return docRef.id;
   }
 
   Future<void> updateColumn(AtendimentoColumnModel column) async {

@@ -69,6 +69,7 @@ class _AtendimentoColumnState extends State<AtendimentoColumn>
       onLeave: (_) => setState(() => _isCardDraggingOver = false),
       onAcceptWithDetails: (details) {
         setState(() => _isCardDraggingOver = false);
+        // Garante que estamos usando o ID real da coluna
         widget.onCardMove(details.data.id, widget.column.id);
       },
       builder: (context, candidateData, rejectedData) {
@@ -170,7 +171,8 @@ class _AtendimentoColumnState extends State<AtendimentoColumn>
                             )
                           : ListView.builder(
                               // Adiciona uma key baseada nos IDs dos cards para forçar rebuild se a lista mudar
-                              key: ValueKey(widget.cards.map((e) => e.id).join(',')),
+                              key: ValueKey(
+                                  widget.cards.map((e) => e.id).join(',')),
                               itemCount: widget.cards.length,
                               itemBuilder: (context, index) {
                                 final card = widget.cards[index];

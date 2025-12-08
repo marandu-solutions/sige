@@ -22,8 +22,6 @@ class ReadOnlyAtendimentoCardWidget extends StatelessWidget {
     final textTheme = Theme.of(context).textTheme;
 
     final priorityColor = _getPriorityColor(colorScheme);
-    final daysUntilDue = card.dataLimite.difference(DateTime.now()).inDays;
-    final isOverdue = daysUntilDue < 0;
 
     // Apenas InkWell e Card, sem Draggable
     return InkWell(
@@ -58,23 +56,7 @@ class ReadOnlyAtendimentoCardWidget extends StatelessWidget {
                     ),
                   ),
                   const Spacer(),
-                  Icon(
-                    LucideIcons.calendar,
-                    size: 16,
-                    color: isOverdue
-                        ? colorScheme.error
-                        : colorScheme.onSurface.withOpacity(0.6),
-                  ),
                   const SizedBox(width: 4),
-                  Text(
-                    DateFormat('dd/MM').format(card.dataLimite),
-                    style: textTheme.bodySmall?.copyWith(
-                      color: isOverdue
-                          ? colorScheme.error
-                          : colorScheme.onSurface.withOpacity(0.7),
-                      fontWeight: isOverdue ? FontWeight.bold : null,
-                    ),
-                  ),
                 ],
               ),
               const SizedBox(height: 8),

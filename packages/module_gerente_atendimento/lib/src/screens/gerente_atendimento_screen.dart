@@ -135,7 +135,6 @@ class _GerenteAtendimentoScreenState
             clienteEmail: clienteEmail,
             colunaStatus: colunaId,
             prioridade: prioridade,
-            dataLimite: dataLimite,
             dataCriacao: DateTime.now(),
             ultimaMensagem: '',
             ultimaMensagemData: DateTime.now(),

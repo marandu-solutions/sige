@@ -233,7 +233,7 @@ class _AtendimentoScreenState extends ConsumerState<AtendimentoScreen> {
       builder: (context) => AddAtendimentoCardDialog(
         columns: atendimentoAsync.valueOrNull!.columns,
         onSave: (titulo, clienteNome, clienteTelefone, clienteEmail, prioridade,
-            dataLimite, colunaId) {
+            colunaId) {
           final newCard = AtendimentoCardModel(
             id: 'temp_${Random().nextInt(1000000)}',
             tenantId: widget.tenantId,
@@ -243,7 +243,6 @@ class _AtendimentoScreenState extends ConsumerState<AtendimentoScreen> {
             clienteEmail: clienteEmail,
             colunaStatus: colunaId,
             prioridade: prioridade,
-            dataLimite: dataLimite,
             dataCriacao: DateTime.now(),
             ultimaMensagem: '',
             ultimaMensagemData: DateTime.now(),

@@ -6,14 +6,8 @@ import 'package:intl/intl.dart';
 /// Dialog para adicionar novo atendimento
 class AddAtendimentoCardDialog extends StatefulWidget {
   final List<AtendimentoColumnModel> columns;
-  final Function(
-      String titulo,
-      String clienteNome,
-      String clienteTelefone,
-      String clienteEmail,
-      String prioridade,
-      DateTime dataLimite,
-      String colunaId) onSave;
+  final Function(String titulo, String clienteNome, String clienteTelefone,
+      String clienteEmail, String prioridade, String colunaId) onSave;
 
   const AddAtendimentoCardDialog({
     super.key,
@@ -32,17 +26,13 @@ class _AddAtendimentoCardDialogState extends State<AddAtendimentoCardDialog> {
   final _clienteNomeController = TextEditingController();
   final _clienteTelefoneController = TextEditingController();
   final _clienteEmailController = TextEditingController();
-  final _dataLimiteController = TextEditingController();
   String _colunaId = '';
   String _prioridade = 'media';
-  DateTime? _dataLimite;
 
   @override
   void initState() {
     super.initState();
     _colunaId = widget.columns.isNotEmpty ? widget.columns.first.id : '';
-    _dataLimite = DateTime.now().add(const Duration(days: 7));
-    _dataLimiteController.text = DateFormat('dd/MM/yyyy').format(_dataLimite!);
   }
 
   @override
@@ -51,23 +41,7 @@ class _AddAtendimentoCardDialogState extends State<AddAtendimentoCardDialog> {
     _clienteNomeController.dispose();
     _clienteTelefoneController.dispose();
     _clienteEmailController.dispose();
-    _dataLimiteController.dispose();
     super.dispose();
-  }
-
-  Future<void> _selectDate() async {
-    final DateTime? picked = await showDatePicker(
-      context: context,
-      initialDate: _dataLimite ?? DateTime.now(),
-      firstDate: DateTime.now(),
-      lastDate: DateTime.now().add(const Duration(days: 365)),
-    );
-    if (picked != null) {
-      setState(() {
-        _dataLimite = picked;
-        _dataLimiteController.text = DateFormat('dd/MM/yyyy').format(picked);
-      });
-    }
   }
 
   @override
@@ -216,28 +190,6 @@ class _AddAtendimentoCardDialogState extends State<AddAtendimentoCardDialog> {
                   }
                 },
               ),
-              const SizedBox(height: 16),
-
-              // Data limite
-              TextFormField(
-                controller: _dataLimiteController,
-                decoration: InputDecoration(
-                  labelText: 'Data limite',
-                  prefixIcon: const Icon(LucideIcons.calendar),
-                  suffixIcon: IconButton(
-                    icon: const Icon(LucideIcons.calendarDays),
-                    onPressed: _selectDate,
-                  ),
-                ),
-                readOnly: true,
-                onTap: _selectDate,
-                validator: (value) {
-                  if (_dataLimite == null) {
-                    return 'Por favor, selecione uma data limite';
-                  }
-                  return null;
-                },
-              ),
             ],
           ),
         ),
@@ -256,7 +208,6 @@ class _AddAtendimentoCardDialogState extends State<AddAtendimentoCardDialog> {
                 _clienteTelefoneController.text.trim(),
                 _clienteEmailController.text.trim(),
                 _prioridade,
-                _dataLimite!,
                 _colunaId,
               );
               Navigator.of(context).pop();
