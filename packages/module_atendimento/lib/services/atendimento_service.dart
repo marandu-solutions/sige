@@ -29,18 +29,43 @@ class AtendimentoService {
             toFirestore: (card, _) => card.toMap(),
           );
 
-  CollectionReference<AtendimentoColumnModel> _columnsRef(String tenantId) =>
-      _firestore
+  CollectionReference<AtendimentoColumnModel> _columnsRef(String tenantId) {
+    final user = FirebaseAuth.instance.currentUser;
+    // Se não houver usuário logado (ex: durante logout ou inicialização), retorna a referência padrão do tenant.
+    // Mas o ideal é que cada usuário tenha suas colunas.
+    // A estrutura ideal seria: tenant/{tenantId}/users/{userId}/atendimento/board/columns
+    // Mas para manter compatibilidade com a estrutura atual (tenant/{tenantId}/atendimento/board/columns),
+    // podemos continuar usando a estrutura atual SE o requisito for um board compartilhado.
+    // O usuário disse: "o kanban é algo individual do usuário logado no sistema... mas do jeito que essa collection está no firebase eu acredito que não esteja tornando isso possivel".
+    
+    // CORREÇÃO: Para tornar individual por usuário, precisamos mudar a referência para incluir o ID do usuário.
+    if (user != null) {
+      return _firestore
           .collection('tenant')
           .doc(tenantId)
-          .collection('atendimento')
-          .doc('board')
-          .collection('columns')
+          .collection('users')
+          .doc(user.uid)
+          .collection('atendimento_board_columns') // Nome da coleção de colunas pessoais
           .withConverter<AtendimentoColumnModel>(
             fromFirestore: (snapshot, _) =>
                 AtendimentoColumnModel.fromFirestore(snapshot),
             toFirestore: (column, _) => column.toMap(),
           );
+    }
+    
+    // Fallback para board compartilhado se não tiver user (não deve acontecer em uso normal)
+    return _firestore
+        .collection('tenant')
+        .doc(tenantId)
+        .collection('atendimento')
+        .doc('board')
+        .collection('columns')
+        .withConverter<AtendimentoColumnModel>(
+          fromFirestore: (snapshot, _) =>
+              AtendimentoColumnModel.fromFirestore(snapshot),
+          toFirestore: (column, _) => column.toMap(),
+        );
+  }
 
   CollectionReference<MensagemModel> _mensagensRef(String tenantId) =>
       _firestore

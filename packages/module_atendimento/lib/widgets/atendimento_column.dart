@@ -169,6 +169,8 @@ class _AtendimentoColumnState extends State<AtendimentoColumn>
                               ),
                             )
                           : ListView.builder(
+                              // Adiciona uma key baseada nos IDs dos cards para forçar rebuild se a lista mudar
+                              key: ValueKey(widget.cards.map((e) => e.id).join(',')),
                               itemCount: widget.cards.length,
                               itemBuilder: (context, index) {
                                 final card = widget.cards[index];
