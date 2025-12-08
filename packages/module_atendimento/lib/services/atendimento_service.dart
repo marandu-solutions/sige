@@ -179,6 +179,15 @@ class AtendimentoService {
   }
 
   // Operações de Mensagens
+  Stream<List<MensagemModel>> getMensagensStream(
+      String tenantId, String atendimentoId) {
+    return _mensagensRef(tenantId)
+        .where('atendimento_id', isEqualTo: atendimentoId)
+        .orderBy('data_envio', descending: false)
+        .snapshots()
+        .map((snapshot) => snapshot.docs.map((doc) => doc.data()).toList());
+  }
+
   Future<List<MensagemModel>> getMensagens(
       String tenantId, String atendimentoId) async {
     final snapshot = await _mensagensRef(tenantId)

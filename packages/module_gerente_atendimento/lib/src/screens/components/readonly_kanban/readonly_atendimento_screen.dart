@@ -104,6 +104,7 @@ class _ReadOnlyAtendimentoScreenState
                 tenantId: widget.tenantId,
                 atendimentoId: _cardSelecionado!.id,
                 contactName: _cardSelecionado!.clienteNome,
+                contactPhone: _cardSelecionado!.clienteTelefone,
                 onClose: () {
                   setState(() {
                     _cardSelecionado = null;

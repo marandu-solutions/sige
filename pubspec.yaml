@@ -57,6 +57,8 @@ dependencies:
     path: packages/module_admin_empresa
   module_gerente_atendimento:
     path: packages/module_gerente_atendimento
+  module_leads:
+    path: packages/module_leads
 
 dev_dependencies:
   flutter_test:

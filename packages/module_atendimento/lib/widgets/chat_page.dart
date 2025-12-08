@@ -1,3 +1,4 @@
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:lucide_icons/lucide_icons.dart';
@@ -9,6 +10,7 @@ class ChatPage extends ConsumerStatefulWidget {
   final String tenantId;
   final String atendimentoId;
   final String contactName;
+  final String contactPhone;
   final VoidCallback onClose;
 
   const ChatPage({
@@ -16,6 +18,7 @@ class ChatPage extends ConsumerStatefulWidget {
     required this.tenantId,
     required this.atendimentoId,
     required this.contactName,
+    required this.contactPhone,
     required this.onClose,
   });
 
@@ -122,8 +125,33 @@ class _ChatPageState extends ConsumerState<ChatPage> {
                 child: mensagensAsync.when(
                   loading: () =>
                       const Center(child: CircularProgressIndicator()),
-                  error: (error, stack) => Center(child: Text('Erro: $error')),
+                  error: (error, stack) {
+                    // Imprime o erro no console para que o link de criação de índice possa ser clicado
+                    print('Erro no chat: $error');
+                    return Center(
+                      child: Padding(
+                        padding: const EdgeInsets.all(16.0),
+                        child: Text(
+                          'Erro: $error',
+                          style: const TextStyle(color: Colors.red),
+                          textAlign: TextAlign.center,
+                        ),
+                      ),
+                    );
+                  },
                   data: (mensagens) {
+                    if (mensagens.isEmpty) {
+                      return Center(
+                        child: Text(
+                          'Nenhuma mensagem ainda',
+                          style: TextStyle(
+                            color: Colors.black87, // Cor alterada para preto
+                            fontSize: 14,
+                          ),
+                        ),
+                      );
+                    }
+
                     WidgetsBinding.instance.addPostFrameCallback((_) {
                       _scrollToBottom();
                     });
@@ -172,6 +200,12 @@ class _ChatPageState extends ConsumerState<ChatPage> {
                             horizontal: 16,
                             vertical: 8,
                           ),
+                          hintStyle: TextStyle(
+                            color: Colors.grey[600],
+                          ),
+                        ),
+                        style: const TextStyle(
+                          color: Colors.black87,
                         ),
                         maxLines: null,
                         textCapitalization: TextCapitalization.sentences,
@@ -199,6 +233,8 @@ class _ChatPageState extends ConsumerState<ChatPage> {
     final text = _messageController.text.trim();
     if (text.isEmpty) return;
 
+    final user = FirebaseAuth.instance.currentUser;
+
     final mensagem = MensagemModel(
       id: '',
       tenantId: widget.tenantId,
@@ -206,6 +242,10 @@ class _ChatPageState extends ConsumerState<ChatPage> {
       texto: text,
       isUsuario: true, // Mensagem enviada pelo usuário do sistema
       dataEnvio: DateTime.now(),
+      status: 'pending_send', // Marca para envio via Cloud Function/N8N
+      telefoneDestino: widget.contactPhone,
+      remetenteUid: user?.uid,
+      remetenteTipo: 'vendedor',
     );
 
     ref
@@ -261,16 +301,55 @@ class _MessageBubble extends StatelessWidget {
               ),
             ),
             const SizedBox(height: 4),
-            Text(
-              time,
-              style: TextStyle(
-                color: Colors.grey[600],
-                fontSize: 10,
-              ),
+            Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  time,
+                  style: TextStyle(
+                    color: Colors.grey[600],
+                    fontSize: 10,
+                  ),
+                ),
+                if (isUsuario) ...[
+                  const SizedBox(width: 4),
+                  _buildStatusIcon(mensagem.status),
+                ],
+              ],
             ),
           ],
         ),
       ),
     );
+  }
+
+  Widget _buildStatusIcon(String status) {
+    // 1 check (cinza) quando a msg é registrada no bd
+    if (status == 'pending_send') {
+      return const Icon(
+        Icons.check,
+        size: 14,
+        color: Colors.grey,
+      );
+    }
+    // 2 checks (cinza), quando enviada para o n8n
+    else if (status == 'sent') {
+      return const Icon(
+        Icons.done_all,
+        size: 14,
+        color: Colors.grey,
+      );
+    }
+    // icone de erro (circulo com ! dentro) quando houver um erro no envio
+    else if (status == 'error') {
+      return const Icon(
+        Icons.error_outline,
+        size: 14,
+        color: Colors.red,
+      );
+    }
+
+    // Default fallback (e.g. unknown status)
+    return const SizedBox.shrink();
   }
 }

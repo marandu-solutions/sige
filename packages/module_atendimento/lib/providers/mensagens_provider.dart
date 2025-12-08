@@ -3,7 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:module_atendimento/models/mensagem_model.dart';
 import 'package:module_atendimento/services/atendimento_service.dart';
 
-final mensagensProvider = AsyncNotifierProvider.autoDispose
+final mensagensProvider = StreamNotifierProvider.autoDispose
     .family<MensagensNotifier, List<MensagemModel>, MensagensParams>(() {
   return MensagensNotifier();
 });
@@ -13,34 +13,38 @@ class MensagensParams {
   final String atendimentoId;
 
   MensagensParams({required this.tenantId, required this.atendimentoId});
+
+  @override
+  bool operator ==(Object other) {
+    if (identical(this, other)) return true;
+    return other is MensagensParams &&
+        other.tenantId == tenantId &&
+        other.atendimentoId == atendimentoId;
+  }
+
+  @override
+  int get hashCode => tenantId.hashCode ^ atendimentoId.hashCode;
 }
 
 class MensagensNotifier
-    extends AutoDisposeFamilyAsyncNotifier<List<MensagemModel>, MensagensParams> {
+    extends AutoDisposeFamilyStreamNotifier<List<MensagemModel>, MensagensParams> {
   @override
-  FutureOr<List<MensagemModel>> build(MensagensParams params) {
-    return _getMensagens(params.tenantId, params.atendimentoId);
-  }
-
-  Future<List<MensagemModel>> _getMensagens(String tenantId, String atendimentoId) {
+  Stream<List<MensagemModel>> build(MensagensParams params) {
     final atendimentoService = ref.read(atendimentoServiceProvider);
-    return atendimentoService.getMensagens(tenantId, atendimentoId);
+    return atendimentoService.getMensagensStream(params.tenantId, params.atendimentoId);
   }
 
   Future<void> addMensagem(MensagemModel mensagem) async {
     final atendimentoService = ref.read(atendimentoServiceProvider);
 
-    // Atualiza o estado localmente
-    final currentMensagens = state.valueOrNull ?? [];
-    final updatedMensagens = [...currentMensagens, mensagem];
-    state = AsyncValue.data(updatedMensagens);
-
-    // Atualiza no Firebase em background
+    // Com Stream, não precisamos atualizar o estado local manualmente para a maioria dos casos,
+    // pois o Firestore SDK tem "latency compensation" e vai emitir um novo evento no stream
+    // quase imediatamente com o dado local.
     try {
       await atendimentoService.addMensagem(mensagem);
     } catch (e) {
-      // Se houver erro, recarrega as mensagens
-      state = await AsyncValue.guard(() => _getMensagens(mensagem.tenantId, mensagem.atendimentoId));
+      print('Erro ao enviar mensagem: $e');
+      // Opcional: Tratar erro de envio na UI
     }
   }
 

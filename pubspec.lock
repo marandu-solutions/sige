@@ -89,6 +89,14 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "1.0.8"
+  data_table_2:
+    dependency: transitive
+    description:
+      name: data_table_2
+      sha256: cb31d465dcf1e1598a662d06d3d2c16c73700ae9e837a3d91588f1dda7519abc
+      url: "https://pub.dev"
+    source: hosted
+    version: "2.7.2"
   fake_async:
     dependency: transitive
     description:
@@ -334,6 +342,13 @@ packages:
     dependency: "direct main"
     description:
       path: "packages/module_kanban"
+      relative: true
+    source: path
+    version: "0.0.1"
+  module_leads:
+    dependency: "direct main"
+    description:
+      path: "packages/module_leads"
       relative: true
     source: path
     version: "0.0.1"

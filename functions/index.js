@@ -1,41 +1,54 @@
-const functions = require("firebase-functions");
+const { onDocumentCreated } = require("firebase-functions/v2/firestore");
+const { defineSecret } = require("firebase-functions/params");
 const admin = require("firebase-admin");
 const axios = require("axios");
 
 admin.initializeApp();
 
-// URL do webhook do N8N (configure isso nas variáveis de ambiente)
-const N8N_WEBHOOK_URL = process.env.N8N_WEBHOOK_URL || "YOUR_N8N_WEBHOOK_URL";
+const n8nWebhookUrl = defineSecret("N8N_WEBHOOK_URL");
 
 /**
- * Trigger que ouve a criação de novas mensagens na subcoleção 'messages' de um lead.
- * Caminho: leads/{leadId}/messages/{messageId}
+ * Trigger que ouve a criação de novas mensagens na coleção 'interactions' dentro de um tenant.
+ * Caminho: tenant/{tenantId}/interactions/{interactionId}
  */
-exports.sendMessageToN8N = functions.firestore
-  .document("leads/{leadId}/messages/{messageId}")
-  .onCreate(async (snap, context) => {
+exports.sendMessageToN8N = onDocumentCreated(
+  {
+    document: "tenant/{tenantId}/interactions/{interactionId}",
+    secrets: [n8nWebhookUrl],
+  },
+  async (event) => {
+    const snap = event.data;
+    if (!snap) {
+      console.log("No data associated with the event");
+      return;
+    }
+    
     const messageData = snap.data();
-    const messageId = context.params.messageId;
-    const leadId = context.params.leadId;
+    const interactionId = event.params.interactionId;
+    const tenantId = event.params.tenantId;
 
-    // Verifica se o status é 'pending_send'
+    // Filtra para enviar apenas mensagens com status 'pending_send'
+    // O service cria com status 'pending_send' quando enviada pelo app.
     if (messageData.status === "pending_send") {
       try {
-        console.log(`Processing message ${messageId} for lead ${leadId}`);
+        console.log(`Processing interaction ${interactionId} for tenant ${tenantId}`);
+
+        const webhookUrl = n8nWebhookUrl.value();
 
         // Payload para o N8N
         const payload = {
-          messageId: messageId,
-          leadId: leadId,
+          interactionId: interactionId,
+          tenantId: tenantId,
           text: messageData.texto,
           customerPhone: messageData.telefone_destino,
           senderUid: messageData.remetente_uid,
-          sentAt: messageData.sent_at,
-          ...messageData
+          sentAt: messageData.data_envio || messageData.sent_at,
+          messageType: messageData.anexo_tipo ? messageData.anexo_tipo : 'text', // Define o tipo da mensagem
+          rawMessage: messageData
         };
 
         // Envia para o N8N
-        const response = await axios.post(N8N_WEBHOOK_URL, payload);
+        const response = await axios.post(webhookUrl, payload);
 
         console.log("Response from N8N:", response.status);
 
@@ -57,4 +70,5 @@ exports.sendMessageToN8N = functions.firestore
         });
       }
     }
-  });
+  }
+);
