@@ -351,6 +351,7 @@ class _AddEditFuncionarioDialogState
   late TextEditingController _telefoneController;
   bool _ativo = true;
   bool _isLoading = false;
+  List<String> _selectedModulos = [];
 
   @override
   void initState() {
@@ -364,6 +365,7 @@ class _AddEditFuncionarioDialogState
     _telefoneController =
         TextEditingController(text: widget.funcionario?.telefone ?? '');
     _ativo = widget.funcionario?.ativo ?? true;
+    _selectedModulos = List.from(widget.funcionario?.modulosAcesso ?? []);
   }
 
   @override
@@ -375,65 +377,415 @@ class _AddEditFuncionarioDialogState
     super.dispose();
   }
 
+  String _formatModuleName(String module) {
+    switch (module.toUpperCase()) {
+      case 'MODULE_BASIC_DASHBOARD':
+        return 'Dashboard Básico';
+      case 'MODULE_ESTOQUE':
+        return 'Gestão de Estoque';
+      case 'MODULE_KANBAN':
+        return 'Kanban de Tarefas';
+      case 'MODULE_ATENDIMENTO':
+        return 'Atendimento';
+      case 'MODULE_ADMIN_EMPRESA':
+        return 'Administração';
+      case 'MODULE_GERENTE_ATENDIMENTO':
+        return 'Gerência de Atendimento';
+      default:
+        // Remove prefixo module_ ou MODULE_ (case insensitive)
+        String name =
+            module.replaceAll(RegExp(r'^module_', caseSensitive: false), '');
+        // Substitui underscores por espaços
+        name = name.replaceAll('_', ' ');
+        // Aplica Title Case
+        name = name.split(' ').map((word) {
+          if (word.isEmpty) return '';
+          return '${word[0].toUpperCase()}${word.substring(1).toLowerCase()}';
+        }).join(' ');
+
+        return 'Módulo $name';
+    }
+  }
+
+  IconData _getModuleIcon(String module) {
+    switch (module.toUpperCase()) {
+      case 'MODULE_BASIC_DASHBOARD':
+        return LucideIcons.layoutDashboard;
+      case 'MODULE_ESTOQUE':
+        return LucideIcons.package;
+      case 'MODULE_KANBAN':
+        return LucideIcons.trello;
+      case 'MODULE_ATENDIMENTO':
+        return LucideIcons.messageCircle;
+      case 'MODULE_ADMIN_EMPRESA':
+        return LucideIcons.settings;
+      case 'MODULE_GERENTE_ATENDIMENTO':
+        return LucideIcons.userCog;
+      default:
+        return LucideIcons.box;
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
     final isEditing = widget.funcionario != null;
 
-    return AlertDialog(
-      title: Text(isEditing ? 'Editar Funcionário' : 'Novo Funcionário'),
-      content: _isLoading
-          ? const SizedBox(
-              height: 100,
-              child: Center(child: CircularProgressIndicator()),
-            )
-          : Form(
-              key: _formKey,
+    return Dialog(
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(28)),
+      elevation: 0,
+      backgroundColor: Colors.transparent,
+      child: Container(
+        constraints: const BoxConstraints(maxWidth: 500),
+        decoration: BoxDecoration(
+          color: theme.colorScheme.surface,
+          borderRadius: BorderRadius.circular(28),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.1),
+              blurRadius: 20,
+              offset: const Offset(0, 10),
+            ),
+          ],
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            // Header
+            Container(
+              padding: const EdgeInsets.fromLTRB(24, 24, 24, 16),
+              decoration: BoxDecoration(
+                color: theme.colorScheme.surface,
+                borderRadius:
+                    const BorderRadius.vertical(top: Radius.circular(28)),
+              ),
+              child: Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: theme.colorScheme.primaryContainer,
+                      borderRadius: BorderRadius.circular(16),
+                    ),
+                    child: Icon(
+                      isEditing ? LucideIcons.userCog : LucideIcons.userPlus,
+                      color: theme.colorScheme.onPrimaryContainer,
+                      size: 24,
+                    ),
+                  ),
+                  const SizedBox(width: 16),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          isEditing ? 'Editar Funcionário' : 'Novo Membro',
+                          style: theme.textTheme.headlineSmall?.copyWith(
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        Text(
+                          isEditing
+                              ? 'Atualize os dados e permissões'
+                              : 'Adicione alguém à sua equipe',
+                          style: theme.textTheme.bodyMedium?.copyWith(
+                            color: theme.colorScheme.onSurfaceVariant,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  IconButton(
+                    onPressed: () => Navigator.pop(context),
+                    icon: const Icon(LucideIcons.x),
+                    style: IconButton.styleFrom(
+                      backgroundColor: theme.colorScheme.surfaceContainerHighest
+                          .withOpacity(0.3),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const Divider(height: 1),
+
+            // Scrollable Content
+            Flexible(
               child: SingleChildScrollView(
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    TextFormField(
-                      controller: _nomeController,
-                      decoration: const InputDecoration(labelText: 'Nome'),
-                      validator: (value) => value == null || value.isEmpty
-                          ? 'Campo obrigatório'
-                          : null,
-                    ),
-                    TextFormField(
-                      controller: _emailController,
-                      decoration: const InputDecoration(labelText: 'Email'),
-                      keyboardType: TextInputType.emailAddress,
-                    ),
-                    TextFormField(
-                      controller: _cargoController,
-                      decoration: const InputDecoration(labelText: 'Cargo'),
-                    ),
-                    TextFormField(
-                      controller: _telefoneController,
-                      decoration: const InputDecoration(labelText: 'Telefone'),
-                      keyboardType: TextInputType.phone,
-                    ),
-                    SwitchListTile(
-                      title: const Text('Ativo'),
-                      value: _ativo,
-                      onChanged: (value) => setState(() => _ativo = value),
-                    ),
-                  ],
+                padding: const EdgeInsets.all(24),
+                child: Form(
+                  key: _formKey,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      // Personal Info Section
+                      _buildSectionLabel(context, 'Informações Pessoais'),
+                      const SizedBox(height: 16),
+                      _buildTextField(
+                        controller: _nomeController,
+                        label: 'Nome Completo',
+                        icon: LucideIcons.user,
+                        validator: (v) =>
+                            v?.isEmpty == true ? 'Nome é obrigatório' : null,
+                      ),
+                      const SizedBox(height: 16),
+                      _buildTextField(
+                        controller: _emailController,
+                        label: 'Email Corporativo',
+                        icon: LucideIcons.mail,
+                        keyboardType: TextInputType.emailAddress,
+                      ),
+                      const SizedBox(height: 16),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: _buildTextField(
+                              controller: _cargoController,
+                              label: 'Cargo',
+                              icon: LucideIcons.briefcase,
+                            ),
+                          ),
+                          const SizedBox(width: 16),
+                          Expanded(
+                            child: _buildTextField(
+                              controller: _telefoneController,
+                              label: 'Telefone',
+                              icon: LucideIcons.phone,
+                              keyboardType: TextInputType.phone,
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 24),
+
+                      // Status Section
+                      Container(
+                        padding: const EdgeInsets.all(4),
+                        decoration: BoxDecoration(
+                          color: theme.colorScheme.surfaceContainerHighest
+                              .withOpacity(0.3),
+                          borderRadius: BorderRadius.circular(16),
+                          border: Border.all(
+                            color: theme.colorScheme.outlineVariant,
+                          ),
+                        ),
+                        child: SwitchListTile(
+                          title: const Text(
+                            'Status da Conta',
+                            style: TextStyle(fontWeight: FontWeight.w600),
+                          ),
+                          subtitle: Text(
+                            _ativo
+                                ? 'Ativo - Pode acessar o sistema'
+                                : 'Inativo - Acesso bloqueado',
+                            style: theme.textTheme.bodySmall?.copyWith(
+                              color: _ativo
+                                  ? theme.colorScheme.primary
+                                  : theme.colorScheme.error,
+                            ),
+                          ),
+                          value: _ativo,
+                          onChanged: (val) => setState(() => _ativo = val),
+                          activeColor: theme.colorScheme.primary,
+                          secondary: Icon(
+                            _ativo ? LucideIcons.checkCircle2 : LucideIcons.ban,
+                            color: _ativo
+                                ? theme.colorScheme.primary
+                                : theme.colorScheme.error,
+                          ),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 24),
+
+                      // Modules Section
+                      _buildSectionLabel(context, 'Permissões de Acesso'),
+                      const SizedBox(height: 8),
+                      Text(
+                        'Selecione os módulos que este funcionário poderá acessar.',
+                        style: theme.textTheme.bodySmall?.copyWith(
+                          color: theme.colorScheme.onSurfaceVariant,
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+                      ref.watch(tenantProvider(widget.tenantId)).when(
+                            data: (tenant) {
+                              if (tenant == null ||
+                                  tenant.modulosAtivos.isEmpty) {
+                                return Center(
+                                  child: Padding(
+                                    padding: const EdgeInsets.all(16),
+                                    child: Text(
+                                      'Nenhum módulo disponível.',
+                                      style: TextStyle(
+                                          color: theme
+                                              .colorScheme.onSurfaceVariant),
+                                    ),
+                                  ),
+                                );
+                              }
+                              return Wrap(
+                                spacing: 8,
+                                runSpacing: 8,
+                                children: tenant.modulosAtivos.map((modulo) {
+                                  final isSelected =
+                                      _selectedModulos.contains(modulo);
+                                  return FilterChip(
+                                    label: Text(_formatModuleName(modulo)),
+                                    avatar: Icon(
+                                      _getModuleIcon(modulo),
+                                      size: 16,
+                                      color: isSelected
+                                          ? theme.colorScheme.onPrimaryContainer
+                                          : theme.colorScheme.onSurfaceVariant,
+                                    ),
+                                    selected: isSelected,
+                                    onSelected: (selected) {
+                                      setState(() {
+                                        if (selected) {
+                                          _selectedModulos.add(modulo);
+                                        } else {
+                                          _selectedModulos.remove(modulo);
+                                        }
+                                      });
+                                    },
+                                    showCheckmark: false,
+                                    selectedColor:
+                                        theme.colorScheme.primaryContainer,
+                                    labelStyle: TextStyle(
+                                      color: isSelected
+                                          ? theme.colorScheme.onPrimaryContainer
+                                          : theme.colorScheme.onSurface,
+                                      fontWeight: isSelected
+                                          ? FontWeight.w600
+                                          : FontWeight.normal,
+                                    ),
+                                    padding: const EdgeInsets.symmetric(
+                                        horizontal: 4, vertical: 8),
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(12),
+                                      side: BorderSide(
+                                        color: isSelected
+                                            ? theme.colorScheme.primary
+                                                .withOpacity(0.5)
+                                            : theme.colorScheme.outlineVariant,
+                                      ),
+                                    ),
+                                  );
+                                }).toList(),
+                              );
+                            },
+                            loading: () => const Center(
+                                child: CircularProgressIndicator()),
+                            error: (_, __) => const Text('Erro ao carregar'),
+                          ),
+                    ],
+                  ),
                 ),
               ),
             ),
-      actions: _isLoading
-          ? []
-          : [
-              TextButton(
-                onPressed: () => Navigator.pop(context),
-                child: const Text('Cancelar'),
+            const Divider(height: 1),
+
+            // Actions Footer
+            Padding(
+              padding: const EdgeInsets.all(24),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.end,
+                children: [
+                  TextButton(
+                    onPressed: _isLoading ? null : () => Navigator.pop(context),
+                    style: TextButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 24, vertical: 16),
+                    ),
+                    child: const Text('Cancelar'),
+                  ),
+                  const SizedBox(width: 16),
+                  FilledButton.icon(
+                    onPressed: _isLoading ? null : _save,
+                    style: FilledButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 24, vertical: 16),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                    ),
+                    icon: _isLoading
+                        ? const SizedBox(
+                            width: 20,
+                            height: 20,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              color: Colors.white,
+                            ),
+                          )
+                        : const Icon(LucideIcons.check),
+                    label:
+                        Text(_isLoading ? 'Salvando...' : 'Salvar Alterações'),
+                  ),
+                ],
               ),
-              ElevatedButton(
-                onPressed: _save,
-                child: const Text('Salvar'),
-              ),
-            ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildSectionLabel(BuildContext context, String label) {
+    return Text(
+      label.toUpperCase(),
+      style: Theme.of(context).textTheme.labelSmall?.copyWith(
+            fontWeight: FontWeight.bold,
+            letterSpacing: 1.2,
+            color: Theme.of(context).colorScheme.primary,
+          ),
+    );
+  }
+
+  Widget _buildTextField({
+    required TextEditingController controller,
+    required String label,
+    required IconData icon,
+    TextInputType? keyboardType,
+    String? Function(String?)? validator,
+  }) {
+    return TextFormField(
+      controller: controller,
+      keyboardType: keyboardType,
+      validator: validator,
+      style: const TextStyle(fontWeight: FontWeight.w500),
+      decoration: InputDecoration(
+        labelText: label,
+        prefixIcon: Icon(icon, size: 20),
+        filled: true,
+        fillColor: Theme.of(context)
+            .colorScheme
+            .surfaceContainerHighest
+            .withOpacity(0.3),
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: BorderSide.none,
+        ),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: BorderSide(
+            color:
+                Theme.of(context).colorScheme.outlineVariant.withOpacity(0.5),
+          ),
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: BorderSide(
+            color: Theme.of(context).colorScheme.primary,
+            width: 2,
+          ),
+        ),
+        contentPadding:
+            const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+      ),
     );
   }
 
@@ -459,6 +811,7 @@ class _AddEditFuncionarioDialogState
           cargo: cargo.isEmpty ? null : cargo,
           telefone: telefone.isEmpty ? null : telefone,
           ativo: _ativo,
+          modulosAcesso: _selectedModulos,
           dataAtualizacao: DateTime.now(),
         );
         await service.updateFuncionario(updatedFuncionario);
@@ -472,6 +825,7 @@ class _AddEditFuncionarioDialogState
           cargo: cargo.isEmpty ? null : cargo,
           telefone: telefone.isEmpty ? null : telefone,
           ativo: _ativo,
+          modulosAcesso: _selectedModulos,
           dataCriacao: DateTime.now(),
           dataAtualizacao: DateTime.now(),
         );

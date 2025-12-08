@@ -9,6 +9,7 @@ class FuncionarioModel {
   final String? telefone;
   final String? fotoUrl;
   final bool ativo;
+  final List<String> modulosAcesso; // Novo campo
   final DateTime dataCriacao;
   final DateTime dataAtualizacao;
 
@@ -21,6 +22,7 @@ class FuncionarioModel {
     this.telefone,
     this.fotoUrl,
     this.ativo = true,
+    this.modulosAcesso = const [], // Default vazio
     required this.dataCriacao,
     required this.dataAtualizacao,
   });
@@ -40,6 +42,7 @@ class FuncionarioModel {
       telefone: map['telefone'],
       fotoUrl: map['foto_url'],
       ativo: map['ativo'] ?? true,
+      modulosAcesso: List<String>.from(map['modulos_acesso'] ?? []), // Parse da lista
       dataCriacao: _parseTimestamp(map['data_criacao']) ?? DateTime.now(),
       dataAtualizacao: _parseTimestamp(map['data_atualizacao']) ?? DateTime.now(),
     );
@@ -61,6 +64,7 @@ class FuncionarioModel {
       'telefone': telefone,
       'foto_url': fotoUrl,
       'ativo': ativo,
+      'modulos_acesso': modulosAcesso, // Salva no mapa
       'data_criacao': Timestamp.fromDate(dataCriacao),
       'data_atualizacao': Timestamp.fromDate(dataAtualizacao),
     };
@@ -75,6 +79,7 @@ class FuncionarioModel {
     String? telefone,
     String? fotoUrl,
     bool? ativo,
+    List<String>? modulosAcesso, // Parâmetro opcional
     DateTime? dataCriacao,
     DateTime? dataAtualizacao,
   }) {
@@ -87,6 +92,7 @@ class FuncionarioModel {
       telefone: telefone ?? this.telefone,
       fotoUrl: fotoUrl ?? this.fotoUrl,
       ativo: ativo ?? this.ativo,
+      modulosAcesso: modulosAcesso ?? this.modulosAcesso, // Copia
       dataCriacao: dataCriacao ?? this.dataCriacao,
       dataAtualizacao: dataAtualizacao ?? this.dataAtualizacao,
     );

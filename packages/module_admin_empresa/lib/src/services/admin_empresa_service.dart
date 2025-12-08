@@ -83,6 +83,17 @@ class AdminEmpresaService {
       final funcionarioComId =
           funcionario.copyWith(id: userCredential.user!.uid);
 
+      // Salva na coleção 'users' (root) para autenticação
+      await _firestore.collection('users').doc(userCredential.user!.uid).set({
+        'uid': userCredential.user!.uid,
+        'nome': funcionario.nome,
+        'email': funcionario.email,
+        'tenant_id': funcionario.tenantId,
+        'role': funcionario.cargo?.toLowerCase() ?? 'funcionario',
+        'created_at': FieldValue.serverTimestamp(),
+      });
+
+      // Salva na subcoleção 'funcionarios' do tenant
       await _funcionariosRef(funcionario.tenantId)
           .doc(userCredential.user!.uid)
           .set(funcionarioComId);

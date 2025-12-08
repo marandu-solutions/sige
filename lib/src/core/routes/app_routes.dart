@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:sige/src/shell/home_page/home_page.dart';
 
 import 'package:module_auth/login_screen.dart';
+import 'package:module_auth/src/auth_wrapper.dart';
 import 'package:module_basic_dashboard/module_basic_dashboard.dart';
 import 'package:module_estoque/module_estoque.dart';
 import 'package:module_kanban/module_kanban.dart';
@@ -10,6 +11,7 @@ import 'package:module_admin_empresa/src/screens/admin_dashboard_screen.dart';
 import 'package:module_gerente_atendimento/module_gerente_atendimento.dart';
 
 class AppRoutes {
+  static const String root = '/';
   static const String homepage = '/homepage';
   static const String login = '/login';
   static const String dashboard = '/dashboard';
@@ -34,6 +36,8 @@ class AppRoutes {
     final args = settings.arguments as Map<String, dynamic>?;
 
     switch (settings.name) {
+      case root:
+        return MaterialPageRoute(builder: (_) => const AuthWrapper());
       case homepage:
         return MaterialPageRoute(
           builder: (_) => HomePage(

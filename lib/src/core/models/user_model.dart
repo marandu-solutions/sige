@@ -8,6 +8,8 @@ class UserModel {
   final String email;
   final String tenantId;
   final String role;
+  final String? avatarUrl;
+  final DateTime? createdAt;
 
   UserModel({
     required this.id,
@@ -15,6 +17,8 @@ class UserModel {
     required this.email,
     required this.tenantId,
     required this.role,
+    this.avatarUrl,
+    this.createdAt,
   });
 
   /// Converte um DocumentSnapshot do Firestore para um objeto UserModel.
@@ -31,7 +35,16 @@ class UserModel {
       email: map['email'] ?? '',
       tenantId: map['tenant_id'] ?? '',
       role: map['role'] ?? 'user',
+      avatarUrl: map['avatar_url'] == 'null' ? null : map['avatar_url'],
+      createdAt: _parseTimestamp(map['created_at']),
     );
+  }
+
+  static DateTime? _parseTimestamp(dynamic timestamp) {
+    if (timestamp == null) return null;
+    if (timestamp is Timestamp) return timestamp.toDate();
+    if (timestamp is String) return DateTime.tryParse(timestamp);
+    return null;
   }
 
   /// Converte o objeto UserModel para um Map compatível com Firestore.
@@ -41,6 +54,8 @@ class UserModel {
       'email': email,
       'tenant_id': tenantId,
       'role': role,
+      'avatar_url': avatarUrl,
+      'created_at': createdAt != null ? Timestamp.fromDate(createdAt!) : null,
     };
   }
 
@@ -51,6 +66,8 @@ class UserModel {
     String? email,
     String? tenantId,
     String? role,
+    String? avatarUrl,
+    DateTime? createdAt,
   }) {
     return UserModel(
       id: id ?? this.id,
@@ -58,12 +75,14 @@ class UserModel {
       email: email ?? this.email,
       tenantId: tenantId ?? this.tenantId,
       role: role ?? this.role,
+      avatarUrl: avatarUrl ?? this.avatarUrl,
+      createdAt: createdAt ?? this.createdAt,
     );
   }
 
   @override
   String toString() {
-    return 'UserModel(id: $id, nome: $nome, email: $email, tenantId: $tenantId, role: $role)';
+    return 'UserModel(id: $id, nome: $nome, email: $email, tenantId: $tenantId, role: $role, avatarUrl: $avatarUrl, createdAt: $createdAt)';
   }
 
   @override
@@ -74,7 +93,9 @@ class UserModel {
         other.nome == nome &&
         other.email == email &&
         other.tenantId == tenantId &&
-        other.role == role;
+        other.role == role &&
+        other.avatarUrl == avatarUrl &&
+        other.createdAt == createdAt;
   }
 
   @override
@@ -83,6 +104,8 @@ class UserModel {
         nome.hashCode ^
         email.hashCode ^
         tenantId.hashCode ^
-        role.hashCode;
+        role.hashCode ^
+        avatarUrl.hashCode ^
+        createdAt.hashCode;
   }
 }

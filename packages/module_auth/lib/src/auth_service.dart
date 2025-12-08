@@ -21,6 +21,7 @@ class AuthService extends ChangeNotifier {
   User? _user;
   Map<String, dynamic>? _userData;
   Map<String, dynamic>? _tenantData;
+  Map<String, dynamic>? _employeeData;
 
   AuthService()
       : _auth = FirebaseAuth.instance,
@@ -32,6 +33,7 @@ class AuthService extends ChangeNotifier {
   User? get user => _user;
   Map<String, dynamic>? get userData => _userData;
   Map<String, dynamic>? get tenantData => _tenantData;
+  Map<String, dynamic>? get employeeData => _employeeData;
 
   Future<void> _onAuthStateChanged(User? firebaseUser) async {
     if (firebaseUser == null) {
@@ -40,6 +42,7 @@ class AuthService extends ChangeNotifier {
       _user = null;
       _userData = null;
       _tenantData = null;
+      _employeeData = null;
     } else {
       _user = firebaseUser;
       await _loadUserData();
@@ -62,6 +65,22 @@ class AuthService extends ChangeNotifier {
             .doc(_userData!['tenant_id'])
             .get();
         _tenantData = tenantDoc.data() as Map<String, dynamic>?;
+
+        // Tenta carregar dados do funcionário se existir na subcoleção
+        try {
+          DocumentSnapshot employeeDoc = await _firestore
+              .collection('tenant')
+              .doc(_userData!['tenant_id'])
+              .collection('funcionarios')
+              .doc(_user!.uid)
+              .get();
+          if (employeeDoc.exists) {
+            _employeeData = employeeDoc.data() as Map<String, dynamic>?;
+          }
+        } catch (e) {
+          print(
+              'AuthService: Dados de funcionário não encontrados ou erro: $e');
+        }
       }
     } catch (e) {
       print('AuthService: Erro ao carregar dados do usuário: $e');

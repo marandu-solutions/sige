@@ -21,43 +21,57 @@ class HomePage extends ConsumerStatefulWidget {
 
 class _HomePageState extends ConsumerState<HomePage> {
   int _selectedIndex = 0;
-  List<Widget> _modulosAtivos = [];
-  List<String> _rotasModulos = [];
-  List<Map<String, dynamic>> _modulosInfo = [];
 
   @override
   void initState() {
     super.initState();
-    _carregarModulosAtivos();
   }
 
-  void _carregarModulosAtivos() {
+  ({List<Widget> widgets, List<Map<String, dynamic>> infos}) _calcularModulos(
+    AuthService authService,
+  ) {
     final tenantId = widget.userData?['tenant_id'] as String? ?? '';
     final mapaModulos = AppRoutes.modulosDisponiveis(tenantId);
 
-    final modulosAtivosNomes =
-        widget.tenantData?['modulos_ativos'] as List<dynamic>? ?? [];
+    // Lista base: o que a empresa contratou
+    List<String> modulosPermitidos = List<String>.from(
+      widget.tenantData?['modulos_ativos'] ?? [],
+    );
 
-    _modulosAtivos = [];
-    _rotasModulos = [];
-    _modulosInfo = [];
+    // Filtragem por permissão do funcionário
+    final role =
+        authService.userData?['role']?.toString().toLowerCase() ??
+        'funcionario';
 
-    for (final moduloNome in modulosAtivosNomes) {
+    // Se não for admin/dono, filtra pelo acesso delegado
+    if (role != 'admin' && role != 'dono') {
+      final employeeModules = List<String>.from(
+        authService.employeeData?['modulos_acesso'] ?? [],
+      );
+
+      // Intersecção: Só mostra o que a empresa tem E o funcionário pode ver
+      modulosPermitidos = modulosPermitidos
+          .where((m) => employeeModules.contains(m))
+          .toList();
+    }
+
+    final List<Widget> widgets = [];
+    final List<Map<String, dynamic>> infos = [];
+
+    for (final moduloNome in modulosPermitidos) {
       if (mapaModulos.containsKey(moduloNome)) {
         final moduloWidget = mapaModulos[moduloNome]!;
-        _modulosAtivos.add(moduloWidget);
+        widgets.add(moduloWidget);
 
-        // A informação de rota, título e ícone precisa ser gerenciada de outra forma
-        // ou o mapa em AppRoutes precisa ser mais complexo.
-        // Por simplicidade, vamos manter um mapa local para metadados.
         final metadata = _getModuloMetadata(moduloNome);
-        _rotasModulos.add(metadata['rota'] as String);
-        _modulosInfo.add({
+        infos.add({
           'titulo': metadata['titulo'] as String,
           'icone': metadata['icone'] as IconData,
         });
       }
     }
+
+    return (widgets: widgets, infos: infos);
   }
 
   Map<String, dynamic> _getModuloMetadata(String moduloNome) {
@@ -103,7 +117,32 @@ class _HomePageState extends ConsumerState<HomePage> {
   }
 
   void _performLogout() {
-    ref.read(authServiceProvider).signOut();
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Sair do Sistema'),
+        content: const Text('Tem certeza que deseja sair?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text('Cancelar'),
+          ),
+          FilledButton(
+            onPressed: () async {
+              Navigator.of(context).pop(); // Fecha o diálogo
+              await ref.read(authServiceProvider).signOut();
+              if (mounted) {
+                // Navega para a raiz (AuthWrapper) removendo todas as rotas anteriores
+                Navigator.of(
+                  context,
+                ).pushNamedAndRemoveUntil(AppRoutes.root, (route) => false);
+              }
+            },
+            child: const Text('Sair'),
+          ),
+        ],
+      ),
+    );
   }
 
   @override
@@ -126,14 +165,19 @@ class _HomePageState extends ConsumerState<HomePage> {
       );
     }
 
-    // Recarrega os módulos se os dados da empresa chegaram após o initState.
-    if (_modulosAtivos.isEmpty && widget.tenantData != null) {
-      _carregarModulosAtivos();
-    }
-
     // Enquanto os dados do usuário não carregam, exibe um placeholder.
     if (authService.user == null) {
       return const Scaffold(body: Center(child: CircularProgressIndicator()));
+    }
+
+    // Calcula os módulos permitidos
+    final modulosData = _calcularModulos(authService);
+    final modulosAtivos = modulosData.widgets;
+    final modulosInfo = modulosData.infos;
+
+    // Garante que o índice selecionado seja válido
+    if (_selectedIndex >= modulosAtivos.length) {
+      _selectedIndex = 0;
     }
 
     final userName =
@@ -146,7 +190,7 @@ class _HomePageState extends ConsumerState<HomePage> {
         'E-mail não disponível';
 
     // Se não houver módulos ativos, mostra mensagem
-    if (_modulosAtivos.isEmpty) {
+    if (modulosAtivos.isEmpty) {
       return Scaffold(
         body: Center(
           child: Column(
@@ -181,13 +225,13 @@ class _HomePageState extends ConsumerState<HomePage> {
           // --- LAYOUT MOBILE ---
           return Scaffold(
             extendBody: true,
-            body: _modulosAtivos[_selectedIndex],
+            body: modulosAtivos[_selectedIndex],
             bottomNavigationBar: Padding(
               padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 20),
               child: BottomNavBar(
                 selectedIndex: _selectedIndex,
                 onItemSelected: _onItemTapped,
-                modulosInfo: _modulosInfo,
+                modulosInfo: modulosInfo,
               ),
             ),
           );
@@ -202,7 +246,7 @@ class _HomePageState extends ConsumerState<HomePage> {
                   userName: userName,
                   userEmail: userEmail,
                   onLogout: _performLogout,
-                  modulosInfo: _modulosInfo,
+                  modulosInfo: modulosInfo,
                 ),
                 Expanded(
                   child: Padding(
@@ -214,7 +258,7 @@ class _HomePageState extends ConsumerState<HomePage> {
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(20),
                       ),
-                      child: _modulosAtivos[_selectedIndex],
+                      child: modulosAtivos[_selectedIndex],
                     ),
                   ),
                 ),
