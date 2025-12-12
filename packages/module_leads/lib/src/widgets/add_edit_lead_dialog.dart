@@ -20,7 +20,6 @@ class AddEditLeadDialog extends StatefulWidget {
 class _AddEditLeadDialogState extends State<AddEditLeadDialog> {
   final _formKey = GlobalKey<FormState>();
   late TextEditingController _nomeController;
-  late TextEditingController _emailController;
   late TextEditingController _telefoneController;
   late TextEditingController _origemController;
   late TextEditingController _observacoesController;
@@ -37,7 +36,6 @@ class _AddEditLeadDialogState extends State<AddEditLeadDialog> {
   void initState() {
     super.initState();
     _nomeController = TextEditingController(text: widget.lead?.nome ?? '');
-    _emailController = TextEditingController(text: widget.lead?.email ?? '');
     _telefoneController =
         TextEditingController(text: widget.lead?.telefone ?? '');
     _origemController = TextEditingController(text: widget.lead?.origem ?? '');
@@ -49,7 +47,6 @@ class _AddEditLeadDialogState extends State<AddEditLeadDialog> {
   @override
   void dispose() {
     _nomeController.dispose();
-    _emailController.dispose();
     _telefoneController.dispose();
     _origemController.dispose();
     _observacoesController.dispose();
@@ -71,12 +68,6 @@ class _AddEditLeadDialogState extends State<AddEditLeadDialog> {
                 decoration: const InputDecoration(labelText: 'Nome'),
                 validator: (value) =>
                     value?.isEmpty ?? true ? 'Campo obrigatório' : null,
-              ),
-              const SizedBox(height: 16),
-              TextFormField(
-                controller: _emailController,
-                decoration: const InputDecoration(labelText: 'Email'),
-                keyboardType: TextInputType.emailAddress,
               ),
               const SizedBox(height: 16),
               TextFormField(
@@ -126,7 +117,6 @@ class _AddEditLeadDialogState extends State<AddEditLeadDialog> {
                 id: widget.lead?.id ?? '',
                 tenantId: widget.tenantId,
                 nome: _nomeController.text.trim(),
-                email: _emailController.text.trim(),
                 telefone: _telefoneController.text.trim(),
                 origem: _origemController.text.trim(),
                 status: _status,

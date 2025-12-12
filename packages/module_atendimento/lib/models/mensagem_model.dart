@@ -17,6 +17,7 @@ class MensagemModel {
   final String? remetenteUid;
   final String? remetenteTipo; // 'vendedor', 'sistema', 'cliente'
   final String? telefoneDestino;
+  final String? leadId;
 
   MensagemModel({
     required this.id,
@@ -32,6 +33,7 @@ class MensagemModel {
     this.remetenteUid,
     this.remetenteTipo,
     this.telefoneDestino,
+    this.leadId,
   });
 
   /// Converte um DocumentSnapshot do Firestore para um objeto MensagemModel.
@@ -57,6 +59,7 @@ class MensagemModel {
       remetenteUid: map['remetente_uid'],
       remetenteTipo: map['remetente_tipo'],
       telefoneDestino: map['telefone_destino'],
+      leadId: map['lead_id'],
     );
   }
 
@@ -87,6 +90,7 @@ class MensagemModel {
       'remetente_uid': remetenteUid,
       'remetente_tipo': remetenteTipo,
       'telefone_destino': telefoneDestino,
+      'lead_id': leadId,
     };
   }
 
@@ -104,6 +108,7 @@ class MensagemModel {
     String? remetenteUid,
     String? remetenteTipo,
     String? telefoneDestino,
+    String? leadId,
   }) {
     return MensagemModel(
       id: id ?? this.id,
@@ -118,6 +123,7 @@ class MensagemModel {
       remetenteUid: remetenteUid ?? this.remetenteUid,
       remetenteTipo: remetenteTipo ?? this.remetenteTipo,
       telefoneDestino: telefoneDestino ?? this.telefoneDestino,
+      leadId: leadId ?? this.leadId,
     );
   }
 }

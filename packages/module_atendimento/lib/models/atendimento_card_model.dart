@@ -17,6 +17,7 @@ class AtendimentoCardModel {
   final int mensagensNaoLidas;
 
   final String? funcionarioResponsavelId;
+  final String? leadId;
 
   AtendimentoCardModel({
     required this.id,
@@ -32,6 +33,7 @@ class AtendimentoCardModel {
     this.ultimaMensagemData,
     this.mensagensNaoLidas = 0,
     this.funcionarioResponsavelId,
+    this.leadId,
   });
 
   /// Converte um DocumentSnapshot do Firestore para um objeto AtendimentoCardModel.
@@ -57,6 +59,7 @@ class AtendimentoCardModel {
       ultimaMensagemData: (map['ultima_mensagem_data'] as Timestamp?)?.toDate(),
       mensagensNaoLidas: map['mensagens_nao_lidas'] ?? 0,
       funcionarioResponsavelId: map['funcionario_responsavel_id'],
+      leadId: map['lead_id'],
     );
   }
 
@@ -77,6 +80,7 @@ class AtendimentoCardModel {
           : null,
       'mensagens_nao_lidas': mensagensNaoLidas,
       'funcionario_responsavel_id': funcionarioResponsavelId,
+      'lead_id': leadId,
     };
   }
 
@@ -95,6 +99,7 @@ class AtendimentoCardModel {
     DateTime? ultimaMensagemData,
     int? mensagensNaoLidas,
     String? funcionarioResponsavelId,
+    String? leadId,
   }) {
     return AtendimentoCardModel(
       id: id ?? this.id,
@@ -111,6 +116,7 @@ class AtendimentoCardModel {
       mensagensNaoLidas: mensagensNaoLidas ?? this.mensagensNaoLidas,
       funcionarioResponsavelId:
           funcionarioResponsavelId ?? this.funcionarioResponsavelId,
+      leadId: leadId ?? this.leadId,
     );
   }
 }

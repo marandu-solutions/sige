@@ -11,6 +11,7 @@ class ChatPage extends ConsumerStatefulWidget {
   final String atendimentoId;
   final String contactName;
   final String contactPhone;
+  final String? leadId;
   final VoidCallback onClose;
 
   const ChatPage({
@@ -19,6 +20,7 @@ class ChatPage extends ConsumerStatefulWidget {
     required this.atendimentoId,
     required this.contactName,
     required this.contactPhone,
+    this.leadId,
     required this.onClose,
   });
 
@@ -246,6 +248,7 @@ class _ChatPageState extends ConsumerState<ChatPage> {
       telefoneDestino: widget.contactPhone,
       remetenteUid: user?.uid,
       remetenteTipo: 'vendedor',
+      leadId: widget.leadId,
     );
 
     ref

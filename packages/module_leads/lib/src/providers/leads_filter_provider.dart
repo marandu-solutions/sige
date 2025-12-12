@@ -93,9 +93,8 @@ final filteredLeadsProvider = Provider.family<AsyncValue<List<LeadModel>>, Strin
       if (filter.searchQuery.isNotEmpty) {
         final query = filter.searchQuery.toLowerCase();
         final matchesName = lead.nome.toLowerCase().contains(query);
-        final matchesEmail = lead.email.toLowerCase().contains(query);
         final matchesPhone = lead.telefone.contains(query);
-        if (!matchesName && !matchesEmail && !matchesPhone) return false;
+        if (!matchesName && !matchesPhone) return false;
       }
 
       // Filter by Status

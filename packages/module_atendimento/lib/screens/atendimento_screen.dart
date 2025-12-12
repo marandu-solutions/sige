@@ -153,6 +153,7 @@ class _AtendimentoScreenState extends ConsumerState<AtendimentoScreen> {
                   atendimentoId: _cardSelecionado!.id,
                   contactName: _cardSelecionado!.clienteNome,
                   contactPhone: _cardSelecionado!.clienteTelefone,
+                  leadId: _cardSelecionado!.leadId,
                   onClose: () {
                     setState(() {
                       _cardSelecionado = null;
@@ -232,9 +233,10 @@ class _AtendimentoScreenState extends ConsumerState<AtendimentoScreen> {
     showDialog(
       context: context,
       builder: (context) => AddAtendimentoCardDialog(
+        tenantId: widget.tenantId,
         columns: atendimentoAsync.valueOrNull!.columns,
         onSave: (titulo, clienteNome, clienteTelefone, clienteEmail, prioridade,
-            colunaId) {
+            colunaId, leadId) {
           final newCard = AtendimentoCardModel(
             id: 'temp_${Random().nextInt(1000000)}',
             tenantId: widget.tenantId,
@@ -248,6 +250,7 @@ class _AtendimentoScreenState extends ConsumerState<AtendimentoScreen> {
             ultimaMensagem: '',
             ultimaMensagemData: DateTime.now(),
             mensagensNaoLidas: 0,
+            leadId: leadId,
           );
           ref
               .read(atendimentoProvider(widget.tenantId).notifier)

@@ -76,7 +76,7 @@ class _LeadsScreenState extends ConsumerState<LeadsScreen> {
                           color: theme.colorScheme.onSurfaceVariant,
                           fontSize: 13,
                         ),
-                        columns: const [
+                        columns: [
                           DataColumn2(label: Text('LEAD'), size: ColumnSize.L),
                           DataColumn2(
                               label: Text('CONTATO'), size: ColumnSize.M),
@@ -160,7 +160,7 @@ class _LeadsScreenState extends ConsumerState<LeadsScreen> {
                         .setSearchQuery(value);
                   },
                   decoration: InputDecoration(
-                    hintText: 'Buscar por nome, email ou telefone...',
+                    hintText: 'Buscar por nome ou telefone...',
                     prefixIcon: Icon(LucideIcons.search,
                         size: 20, color: theme.colorScheme.onSurfaceVariant),
                     filled: true,
@@ -273,15 +273,6 @@ class _LeadsScreenState extends ConsumerState<LeadsScreen> {
             crossAxisAlignment: CrossAxisAlignment.start,
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              if (lead.email.isNotEmpty)
-                Row(
-                  children: [
-                    Icon(LucideIcons.mail,
-                        size: 12, color: theme.colorScheme.onSurfaceVariant),
-                    const SizedBox(width: 4),
-                    Text(lead.email, style: theme.textTheme.bodySmall),
-                  ],
-                ),
               if (lead.telefone.isNotEmpty) ...[
                 const SizedBox(height: 4),
                 Row(

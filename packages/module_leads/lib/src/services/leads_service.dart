@@ -11,11 +11,9 @@ class LeadsService {
 
   LeadsService(this._firestore);
 
-  // Referência para a subcoleção 'leads' dentro de 'tenant/{tenantId}'
+  // Referência para a coleção 'leads' na raiz
   CollectionReference<LeadModel> _leadsRef(String tenantId) {
     return _firestore
-        .collection('tenant')
-        .doc(tenantId)
         .collection('leads')
         .withConverter<LeadModel>(
           fromFirestore: (snapshot, _) => LeadModel.fromFirestore(snapshot),
@@ -23,9 +21,10 @@ class LeadsService {
         );
   }
 
-  // Obter todos os leads (stream)
+  // Obter todos os leads (stream) filtrados por tenant_id
   Stream<List<LeadModel>> getLeadsStream(String tenantId) {
     return _leadsRef(tenantId)
+        .where('tenant_id', isEqualTo: tenantId)
         .orderBy('data_criacao', descending: true)
         .snapshots()
         .map((snapshot) => snapshot.docs.map((doc) => doc.data()).toList());
