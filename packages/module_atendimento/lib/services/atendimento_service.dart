@@ -216,8 +216,9 @@ class AtendimentoService {
   }
 
   // Envio de Mensagem para Integração (N8N)
-  Future<void> sendMessage(
-      String tenantId, String leadId, String customerPhone, String text) async {
+  Future<void> sendMessage(String tenantId, String atendimentoId,
+      String customerPhone, String text,
+      {String? leadId}) async {
     try {
       final user = FirebaseAuth.instance.currentUser;
       if (user == null) {
@@ -227,7 +228,7 @@ class AtendimentoService {
       final mensagem = MensagemModel(
         id: '', // Será gerado pelo Firestore
         tenantId: tenantId,
-        atendimentoId: leadId,
+        atendimentoId: atendimentoId,
         texto: text,
         isUsuario: true,
         dataEnvio: DateTime.now(),
@@ -235,6 +236,7 @@ class AtendimentoService {
         remetenteUid: user.uid,
         remetenteTipo: 'vendedor',
         telefoneDestino: customerPhone,
+        leadId: leadId,
       );
 
       // Salva na coleção de interações do tenant

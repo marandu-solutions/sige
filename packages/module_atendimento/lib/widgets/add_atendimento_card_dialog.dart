@@ -12,7 +12,6 @@ class AddAtendimentoCardDialog extends ConsumerStatefulWidget {
       String titulo,
       String clienteNome,
       String clienteTelefone,
-      String clienteEmail,
       String prioridade,
       String colunaId,
       String? leadId) onSave;
@@ -35,7 +34,6 @@ class _AddAtendimentoCardDialogState
   final _tituloController = TextEditingController();
   final _clienteNomeController = TextEditingController();
   final _clienteTelefoneController = TextEditingController();
-  final _clienteEmailController = TextEditingController();
   String _colunaId = '';
   String _prioridade = 'media';
   String? _selectedLeadId;
@@ -51,7 +49,6 @@ class _AddAtendimentoCardDialogState
     _tituloController.dispose();
     _clienteNomeController.dispose();
     _clienteTelefoneController.dispose();
-    _clienteEmailController.dispose();
     super.dispose();
   }
 
@@ -211,27 +208,6 @@ class _AddAtendimentoCardDialogState
               ),
               const SizedBox(height: 16),
 
-              // Email do cliente
-              TextFormField(
-                controller: _clienteEmailController,
-                decoration: const InputDecoration(
-                  labelText: 'Email do cliente',
-                  hintText: 'Ex: cliente@email.com',
-                  prefixIcon: Icon(LucideIcons.mail),
-                ),
-                validator: (value) {
-                  if (value != null && value.trim().isNotEmpty) {
-                    final emailRegex = RegExp(r'^[^@]+@[^@]+\.[^@]+');
-                    if (!emailRegex.hasMatch(value.trim())) {
-                      return 'Por favor, insira um email válido';
-                    }
-                  }
-                  return null;
-                },
-                keyboardType: TextInputType.emailAddress,
-              ),
-              const SizedBox(height: 16),
-
               // Coluna
               DropdownButtonFormField<String>(
                 value: _colunaId,
@@ -306,7 +282,6 @@ class _AddAtendimentoCardDialogState
                 _tituloController.text.trim(),
                 _clienteNomeController.text.trim(),
                 _clienteTelefoneController.text.trim(),
-                _clienteEmailController.text.trim(),
                 _prioridade,
                 _colunaId,
                 _selectedLeadId,

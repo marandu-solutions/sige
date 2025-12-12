@@ -122,17 +122,17 @@ class _GerenteAtendimentoScreenState
     showDialog(
       context: context,
       builder: (context) => AddLeadGerenteDialog(
+        tenantId: widget.tenantId,
         columns: atendimentoAsync.valueOrNull!.columns,
         funcionarios: funcionariosAsync.value ?? [],
-        onSave: (titulo, clienteNome, clienteTelefone, clienteEmail, prioridade,
-            dataLimite, colunaId, funcionarioId) {
+        onSave: (titulo, clienteNome, clienteTelefone, prioridade, dataLimite,
+            colunaId, funcionarioId, leadId) {
           final newCard = AtendimentoCardModel(
             id: 'temp_${Random().nextInt(1000000)}',
             tenantId: widget.tenantId,
             titulo: titulo,
             clienteNome: clienteNome,
             clienteTelefone: clienteTelefone,
-            clienteEmail: clienteEmail,
             colunaStatus: colunaId,
             prioridade: prioridade,
             dataCriacao: DateTime.now(),
@@ -140,6 +140,7 @@ class _GerenteAtendimentoScreenState
             ultimaMensagemData: DateTime.now(),
             mensagensNaoLidas: 0,
             funcionarioResponsavelId: funcionarioId,
+            leadId: leadId,
           );
           ref
               .read(atendimentoProvider(widget.tenantId).notifier)

@@ -1,45 +1,50 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:module_atendimento/models/atendimento_column_model.dart';
 import 'package:module_admin_empresa/src/models/funcionario_model.dart';
+import 'package:module_leads/module_leads.dart';
 import 'package:lucide_icons/lucide_icons.dart';
 import 'package:intl/intl.dart';
 
 /// Dialog para adicionar novo atendimento com seleção de responsável (para Gerente)
-class AddLeadGerenteDialog extends StatefulWidget {
+class AddLeadGerenteDialog extends ConsumerStatefulWidget {
+  final String tenantId;
   final List<AtendimentoColumnModel> columns;
   final List<FuncionarioModel> funcionarios;
   final Function(
       String titulo,
       String clienteNome,
       String clienteTelefone,
-      String clienteEmail,
       String prioridade,
       DateTime dataLimite,
       String colunaId,
-      String? funcionarioId) onSave;
+      String? funcionarioId,
+      String? leadId) onSave;
 
   const AddLeadGerenteDialog({
     super.key,
+    required this.tenantId,
     required this.columns,
     required this.funcionarios,
     required this.onSave,
   });
 
   @override
-  State<AddLeadGerenteDialog> createState() => _AddLeadGerenteDialogState();
+  ConsumerState<AddLeadGerenteDialog> createState() =>
+      _AddLeadGerenteDialogState();
 }
 
-class _AddLeadGerenteDialogState extends State<AddLeadGerenteDialog> {
+class _AddLeadGerenteDialogState extends ConsumerState<AddLeadGerenteDialog> {
   final _formKey = GlobalKey<FormState>();
   final _tituloController = TextEditingController();
   final _clienteNomeController = TextEditingController();
   final _clienteTelefoneController = TextEditingController();
-  final _clienteEmailController = TextEditingController();
   final _dataLimiteController = TextEditingController();
   String _colunaId = '';
   String _prioridade = 'media';
   String? _funcionarioId;
   DateTime? _dataLimite;
+  String? _selectedLeadId;
 
   @override
   void initState() {
@@ -54,9 +59,22 @@ class _AddLeadGerenteDialogState extends State<AddLeadGerenteDialog> {
     _tituloController.dispose();
     _clienteNomeController.dispose();
     _clienteTelefoneController.dispose();
-    _clienteEmailController.dispose();
     _dataLimiteController.dispose();
     super.dispose();
+  }
+
+  void _onLeadSelected(LeadModel lead) {
+    setState(() {
+      _selectedLeadId = lead.id;
+      _clienteNomeController.text = lead.nome;
+      _clienteTelefoneController.text = lead.telefone;
+      // Email removed from lead model, so we don't set it here
+
+      // Auto-fill title if empty
+      if (_tituloController.text.isEmpty) {
+        _tituloController.text = 'Atendimento - ${lead.nome}';
+      }
+    });
   }
 
   Future<void> _selectDate() async {
@@ -76,7 +94,8 @@ class _AddLeadGerenteDialogState extends State<AddLeadGerenteDialog> {
 
   @override
   Widget build(BuildContext context) {
-    // final theme = Theme.of(context);
+    final theme = Theme.of(context);
+    final leadsAsync = ref.watch(leadsProvider(widget.tenantId));
 
     return AlertDialog(
       title: const Text('Adicionar Novo Lead'),
@@ -87,6 +106,81 @@ class _AddLeadGerenteDialogState extends State<AddLeadGerenteDialog> {
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
+              // Buscar Lead
+              leadsAsync.when(
+                data: (leads) => Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Vincular Lead (Opcional)',
+                      style: theme.textTheme.labelMedium?.copyWith(
+                        color: theme.colorScheme.primary,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Autocomplete<LeadModel>(
+                      optionsBuilder: (TextEditingValue textEditingValue) {
+                        if (textEditingValue.text.isEmpty) {
+                          return const Iterable<LeadModel>.empty();
+                        }
+                        return leads.where((LeadModel lead) {
+                          return lead.nome.toLowerCase().contains(
+                                  textEditingValue.text.toLowerCase()) ||
+                              lead.telefone.contains(textEditingValue.text);
+                        });
+                      },
+                      displayStringForOption: (LeadModel option) => option.nome,
+                      onSelected: _onLeadSelected,
+                      fieldViewBuilder: (context, textEditingController,
+                          focusNode, onFieldSubmitted) {
+                        return TextFormField(
+                          controller: textEditingController,
+                          focusNode: focusNode,
+                          decoration: const InputDecoration(
+                            labelText: 'Buscar Lead',
+                            hintText: 'Nome ou telefone...',
+                            prefixIcon: Icon(LucideIcons.search),
+                          ),
+                        );
+                      },
+                      optionsViewBuilder: (context, onSelected, options) {
+                        return Align(
+                          alignment: Alignment.topLeft,
+                          child: Material(
+                            elevation: 4.0,
+                            child: SizedBox(
+                              width: 300,
+                              child: ListView.builder(
+                                padding: EdgeInsets.zero,
+                                shrinkWrap: true,
+                                itemCount: options.length,
+                                itemBuilder: (BuildContext context, int index) {
+                                  final LeadModel option =
+                                      options.elementAt(index);
+                                  return ListTile(
+                                    title: Text(option.nome),
+                                    subtitle: Text(option.telefone),
+                                    onTap: () {
+                                      onSelected(option);
+                                    },
+                                  );
+                                },
+                              ),
+                            ),
+                          ),
+                        );
+                      },
+                    ),
+                  ],
+                ),
+                loading: () => const LinearProgressIndicator(),
+                error: (_, __) => const SizedBox(),
+              ),
+              const SizedBox(height: 16),
+              const Divider(),
+              const SizedBox(height: 16),
+
               // Título do atendimento
               TextFormField(
                 controller: _tituloController,
@@ -138,27 +232,6 @@ class _AddLeadGerenteDialogState extends State<AddLeadGerenteDialog> {
                   return null;
                 },
                 keyboardType: TextInputType.phone,
-              ),
-              const SizedBox(height: 16),
-
-              // Email do cliente
-              TextFormField(
-                controller: _clienteEmailController,
-                decoration: const InputDecoration(
-                  labelText: 'Email do cliente',
-                  hintText: 'Ex: cliente@email.com',
-                  prefixIcon: Icon(LucideIcons.mail),
-                ),
-                validator: (value) {
-                  if (value != null && value.trim().isNotEmpty) {
-                    final emailRegex = RegExp(r'^[^@]+@[^@]+\.[^@]+');
-                    if (!emailRegex.hasMatch(value.trim())) {
-                      return 'Por favor, insira um email válido';
-                    }
-                  }
-                  return null;
-                },
-                keyboardType: TextInputType.emailAddress,
               ),
               const SizedBox(height: 16),
 
@@ -281,11 +354,11 @@ class _AddLeadGerenteDialogState extends State<AddLeadGerenteDialog> {
                 _tituloController.text.trim(),
                 _clienteNomeController.text.trim(),
                 _clienteTelefoneController.text.trim(),
-                _clienteEmailController.text.trim(),
                 _prioridade,
                 _dataLimite!,
                 _colunaId,
                 _funcionarioId,
+                _selectedLeadId,
               );
               Navigator.of(context).pop();
             }

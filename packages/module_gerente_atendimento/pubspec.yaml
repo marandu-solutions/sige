@@ -10,11 +10,14 @@ dependencies:
   flutter:
     sdk: flutter
   flutter_riverpod: ^2.4.9
+  intl: ^0.19.0
   lucide_icons: ^0.257.0
   module_admin_empresa:
     path: ../module_admin_empresa
   module_atendimento:
     path: ../module_atendimento
+  module_leads:
+    path: ../module_leads
 
 dev_dependencies:
   flutter_test:

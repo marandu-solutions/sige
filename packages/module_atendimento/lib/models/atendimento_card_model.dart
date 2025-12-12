@@ -10,7 +10,6 @@ class AtendimentoCardModel {
   final String prioridade;
   final String clienteNome;
   final String clienteTelefone;
-  final String clienteEmail;
   final DateTime dataCriacao;
   final String ultimaMensagem;
   final DateTime? ultimaMensagemData;
@@ -27,7 +26,6 @@ class AtendimentoCardModel {
     required this.prioridade,
     required this.clienteNome,
     required this.clienteTelefone,
-    required this.clienteEmail,
     required this.dataCriacao,
     this.ultimaMensagem = '',
     this.ultimaMensagemData,
@@ -52,7 +50,6 @@ class AtendimentoCardModel {
       prioridade: map['prioridade'] ?? 'media',
       clienteNome: map['cliente_nome'] ?? '',
       clienteTelefone: map['cliente_telefone'] ?? '',
-      clienteEmail: map['cliente_email'] ?? '',
       dataCriacao:
           (map['data_criacao'] as Timestamp?)?.toDate() ?? DateTime.now(),
       ultimaMensagem: map['ultima_mensagem'] ?? '',
@@ -72,7 +69,6 @@ class AtendimentoCardModel {
       'prioridade': prioridade,
       'cliente_nome': clienteNome,
       'cliente_telefone': clienteTelefone,
-      'cliente_email': clienteEmail,
       'data_criacao': Timestamp.fromDate(dataCriacao),
       'ultima_mensagem': ultimaMensagem,
       'ultima_mensagem_data': ultimaMensagemData != null
@@ -93,7 +89,6 @@ class AtendimentoCardModel {
     String? prioridade,
     String? clienteNome,
     String? clienteTelefone,
-    String? clienteEmail,
     DateTime? dataCriacao,
     String? ultimaMensagem,
     DateTime? ultimaMensagemData,
@@ -109,7 +104,6 @@ class AtendimentoCardModel {
       prioridade: prioridade ?? this.prioridade,
       clienteNome: clienteNome ?? this.clienteNome,
       clienteTelefone: clienteTelefone ?? this.clienteTelefone,
-      clienteEmail: clienteEmail ?? this.clienteEmail,
       dataCriacao: dataCriacao ?? this.dataCriacao,
       ultimaMensagem: ultimaMensagem ?? this.ultimaMensagem,
       ultimaMensagemData: ultimaMensagemData ?? this.ultimaMensagemData,
