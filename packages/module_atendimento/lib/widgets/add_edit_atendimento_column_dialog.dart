@@ -120,31 +120,10 @@ class _AddEditAtendimentoColumnDialogState
         if (widget.onDelete != null) ...[
           TextButton.icon(
             onPressed: () {
-              showDialog(
-                context: context,
-                builder: (context) => AlertDialog(
-                  title: const Text('Confirmar exclusão'),
-                  content: const Text(
-                      'Tem certeza que deseja excluir esta coluna? Os atendimentos serão perdidos.'),
-                  actions: [
-                    TextButton(
-                      onPressed: () => Navigator.of(context).pop(),
-                      child: const Text('CANCELAR'),
-                    ),
-                    TextButton(
-                      onPressed: () {
-                        Navigator.of(context).pop();
-                        Navigator.of(context).pop();
-                        widget.onDelete!();
-                      },
-                      style: TextButton.styleFrom(
-                        foregroundColor: colorScheme.error,
-                      ),
-                      child: const Text('EXCLUIR'),
-                    ),
-                  ],
-                ),
-              );
+              // Fecha o diálogo de edição
+              Navigator.of(context).pop();
+              // Chama o callback de deleção que gerenciará a confirmação e movimentação de cards
+              widget.onDelete!();
             },
             icon: const Icon(Icons.delete),
             label: const Text('Excluir'),

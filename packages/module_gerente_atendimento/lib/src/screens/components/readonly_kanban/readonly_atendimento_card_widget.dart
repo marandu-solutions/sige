@@ -120,7 +120,8 @@ class ReadOnlyAtendimentoCardWidget extends StatelessWidget {
                 Container(
                   padding: const EdgeInsets.all(8),
                   decoration: BoxDecoration(
-                    color: Colors.grey[100],
+                    color: Colors
+                        .grey[800], // Fundo escuro para destacar o texto branco
                     borderRadius: BorderRadius.circular(8),
                   ),
                   child: Row(
@@ -129,7 +130,8 @@ class ReadOnlyAtendimentoCardWidget extends StatelessWidget {
                         child: Text(
                           card.ultimaMensagem,
                           style: textTheme.bodySmall?.copyWith(
-                            color: colorScheme.onSurface.withOpacity(0.8),
+                            color: Colors.white.withOpacity(
+                                0.9), // Texto branco para contraste
                           ),
                           maxLines: 2,
                           overflow: TextOverflow.ellipsis,

@@ -29,39 +29,36 @@ class LeadsFilterWidget extends ConsumerWidget {
                 Wrap(
                   spacing: 8,
                   runSpacing: 8,
-                  children: [
-                    'Novo',
-                    'Em Andamento',
-                    'Convertido',
-                    'Perdido'
-                  ].map((status) {
+                  children: ['Novo', 'Em Andamento', 'Convertido', 'Perdido']
+                      .map((status) {
                     final isSelected = filter.selectedStatuses.contains(status);
                     return FilterChip(
                       label: Text(status),
                       selected: isSelected,
                       onSelected: (_) => notifier.toggleStatus(status),
-                      backgroundColor: theme.colorScheme.surfaceContainerHighest,
+                      backgroundColor:
+                          theme.colorScheme.surfaceContainerHighest,
                       selectedColor: theme.colorScheme.primary.withOpacity(0.2),
                       labelStyle: TextStyle(
-                        color: isSelected 
-                          ? theme.colorScheme.primary 
-                          : theme.colorScheme.onSurface,
-                        fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                        color: isSelected
+                            ? theme.colorScheme.primary
+                            : theme.colorScheme.onSurface,
+                        fontWeight:
+                            isSelected ? FontWeight.bold : FontWeight.normal,
                       ),
                       checkmarkColor: theme.colorScheme.primary,
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(8),
                         side: BorderSide(
-                          color: isSelected 
-                            ? theme.colorScheme.primary 
-                            : theme.dividerColor,
+                          color: isSelected
+                              ? theme.colorScheme.primary
+                              : theme.dividerColor,
                         ),
                       ),
                     );
                   }).toList(),
                 ),
                 const SizedBox(height: 24),
-                
                 _buildSectionTitle(context, 'Origem'),
                 const SizedBox(height: 12),
                 Wrap(
@@ -81,28 +78,29 @@ class LeadsFilterWidget extends ConsumerWidget {
                       label: Text(origin),
                       selected: isSelected,
                       onSelected: (_) => notifier.toggleOrigin(origin),
-                      backgroundColor: theme.colorScheme.surfaceContainerHighest,
+                      backgroundColor:
+                          theme.colorScheme.surfaceContainerHighest,
                       selectedColor: theme.colorScheme.primary.withOpacity(0.2),
                       labelStyle: TextStyle(
-                        color: isSelected 
-                          ? theme.colorScheme.primary 
-                          : theme.colorScheme.onSurface,
-                        fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                        color: isSelected
+                            ? theme.colorScheme.primary
+                            : theme.colorScheme.onSurface,
+                        fontWeight:
+                            isSelected ? FontWeight.bold : FontWeight.normal,
                       ),
                       checkmarkColor: theme.colorScheme.primary,
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(8),
                         side: BorderSide(
-                          color: isSelected 
-                            ? theme.colorScheme.primary 
-                            : theme.dividerColor,
+                          color: isSelected
+                              ? theme.colorScheme.primary
+                              : theme.dividerColor,
                         ),
                       ),
                     );
                   }).toList(),
                 ),
                 const SizedBox(height: 24),
-
                 _buildSectionTitle(context, 'Data de Criação'),
                 const SizedBox(height: 12),
                 InkWell(
@@ -111,9 +109,12 @@ class LeadsFilterWidget extends ConsumerWidget {
                       context: context,
                       firstDate: DateTime(2020),
                       lastDate: DateTime.now(),
-                      initialDateRange: filter.startDate != null && filter.endDate != null
-                          ? DateTimeRange(start: filter.startDate!, end: filter.endDate!)
-                          : null,
+                      initialDateRange:
+                          filter.startDate != null && filter.endDate != null
+                              ? DateTimeRange(
+                                  start: filter.startDate!,
+                                  end: filter.endDate!)
+                              : null,
                       builder: (context, child) {
                         return Theme(
                           data: theme.copyWith(
@@ -130,14 +131,17 @@ class LeadsFilterWidget extends ConsumerWidget {
                     }
                   },
                   child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 12, vertical: 12),
                     decoration: BoxDecoration(
                       border: Border.all(color: theme.dividerColor),
                       borderRadius: BorderRadius.circular(8),
                     ),
                     child: Row(
                       children: [
-                        Icon(LucideIcons.calendar, size: 20, color: theme.colorScheme.onSurfaceVariant),
+                        Icon(LucideIcons.calendar,
+                            size: 20,
+                            color: theme.colorScheme.onSurfaceVariant),
                         const SizedBox(width: 8),
                         Expanded(
                           child: Text(
@@ -145,7 +149,9 @@ class LeadsFilterWidget extends ConsumerWidget {
                                 ? '${_formatDate(filter.startDate!)} - ${_formatDate(filter.endDate!)}'
                                 : 'Selecionar período',
                             style: TextStyle(
-                              color: filter.startDate != null ? theme.colorScheme.onSurface : theme.colorScheme.onSurfaceVariant,
+                              color: filter.startDate != null
+                                  ? theme.colorScheme.onSurface
+                                  : theme.colorScheme.onSurfaceVariant,
                             ),
                           ),
                         ),
@@ -205,8 +211,8 @@ class LeadsFilterWidget extends ConsumerWidget {
           Text(
             'Filtros',
             style: Theme.of(context).textTheme.titleLarge?.copyWith(
-              fontWeight: FontWeight.bold,
-            ),
+                  fontWeight: FontWeight.bold,
+                ),
           ),
           IconButton(
             icon: const Icon(Icons.close),
@@ -221,9 +227,9 @@ class LeadsFilterWidget extends ConsumerWidget {
     return Text(
       title,
       style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-        fontWeight: FontWeight.w600,
-        color: Theme.of(context).colorScheme.onSurfaceVariant,
-      ),
+            fontWeight: FontWeight.w600,
+            color: Theme.of(context).colorScheme.onSurfaceVariant,
+          ),
     );
   }
 

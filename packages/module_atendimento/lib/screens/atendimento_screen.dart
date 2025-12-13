@@ -272,10 +272,33 @@ class _AtendimentoScreenState extends ConsumerState<AtendimentoScreen> {
         board.cards.where((card) => card.colunaStatus == column.id).toList();
 
     if (columnCards.isEmpty) {
-      // Se não houver cards, pode excluir diretamente
-      ref
-          .read(atendimentoProvider(widget.tenantId).notifier)
-          .deleteColumn(column.id);
+      // Se não houver cards, pede confirmação simples
+      showDialog(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: const Text('Excluir Coluna'),
+          content: Text(
+              'Tem certeza que deseja excluir a coluna "${column.title}"?'),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: const Text('CANCELAR'),
+            ),
+            TextButton(
+              onPressed: () {
+                ref
+                    .read(atendimentoProvider(widget.tenantId).notifier)
+                    .deleteColumn(column.id);
+                Navigator.of(context).pop();
+              },
+              style: TextButton.styleFrom(
+                foregroundColor: Theme.of(context).colorScheme.error,
+              ),
+              child: const Text('EXCLUIR'),
+            ),
+          ],
+        ),
+      );
       return;
     }
 

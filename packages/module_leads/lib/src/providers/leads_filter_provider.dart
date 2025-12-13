@@ -1,5 +1,5 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../models/lead_model.dart';
+import 'package:module_leads/src/models/lead_model.dart';
 import 'leads_provider.dart';
 
 class LeadsFilter {
@@ -32,13 +32,13 @@ class LeadsFilter {
       endDate: endDate ?? this.endDate,
     );
   }
-  
-  bool get hasFilters => 
-    searchQuery.isNotEmpty || 
-    selectedStatuses.isNotEmpty || 
-    selectedOrigins.isNotEmpty || 
-    startDate != null || 
-    endDate != null;
+
+  bool get hasFilters =>
+      searchQuery.isNotEmpty ||
+      selectedStatuses.isNotEmpty ||
+      selectedOrigins.isNotEmpty ||
+      startDate != null ||
+      endDate != null;
 
   void clear() {}
 }
@@ -79,11 +79,13 @@ class LeadsFilterNotifier extends StateNotifier<LeadsFilter> {
   }
 }
 
-final leadsFilterProvider = StateNotifierProvider<LeadsFilterNotifier, LeadsFilter>((ref) {
+final leadsFilterProvider =
+    StateNotifierProvider<LeadsFilterNotifier, LeadsFilter>((ref) {
   return LeadsFilterNotifier();
 });
 
-final filteredLeadsProvider = Provider.family<AsyncValue<List<LeadModel>>, String>((ref, tenantId) {
+final filteredLeadsProvider = Provider.autoDispose
+    .family<AsyncValue<List<LeadModel>>, String>((ref, tenantId) {
   final leadsAsync = ref.watch(leadsProvider(tenantId));
   final filter = ref.watch(leadsFilterProvider);
 
@@ -113,7 +115,9 @@ final filteredLeadsProvider = Provider.family<AsyncValue<List<LeadModel>>, Strin
       }
       if (filter.endDate != null) {
         // Add 1 day to end date to include the end date itself (since times are involved)
-        final endOfDay = filter.endDate!.add(const Duration(days: 1)).subtract(const Duration(milliseconds: 1));
+        final endOfDay = filter.endDate!
+            .add(const Duration(days: 1))
+            .subtract(const Duration(milliseconds: 1));
         if (lead.dataCriacao.isAfter(endOfDay)) return false;
       }
 

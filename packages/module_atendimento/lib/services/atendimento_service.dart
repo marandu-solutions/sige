@@ -216,8 +216,8 @@ class AtendimentoService {
   }
 
   // Envio de Mensagem para Integração (N8N)
-  Future<void> sendMessage(String tenantId, String atendimentoId,
-      String customerPhone, String text,
+  Future<void> sendMessage(
+      String tenantId, String atendimentoId, String customerPhone, String text,
       {String? leadId}) async {
     try {
       final user = FirebaseAuth.instance.currentUser;

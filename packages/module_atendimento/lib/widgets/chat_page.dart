@@ -5,6 +5,7 @@ import 'package:lucide_icons/lucide_icons.dart';
 import 'package:intl/intl.dart';
 import 'package:module_atendimento/models/mensagem_model.dart';
 import 'package:module_atendimento/providers/mensagens_provider.dart';
+import 'package:module_leads/module_leads.dart';
 
 class ChatPage extends ConsumerStatefulWidget {
   final String tenantId;
@@ -56,6 +57,26 @@ class _ChatPageState extends ConsumerState<ChatPage> {
           tenantId: widget.tenantId, atendimentoId: widget.atendimentoId),
     ));
 
+    // Buscar lead para obter a foto
+    final leadsAsync = ref.watch(leadsProvider(widget.tenantId));
+    final currentLead = widget.leadId != null
+        ? leadsAsync.valueOrNull
+            ?.where((l) => l.id == widget.leadId)
+            .firstOrNull
+        : null;
+
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+
+    final backgroundColor = isDark ? const Color(0xFF1E1E1E) : Colors.white;
+    final headerColor = isDark
+        ? const Color(0xFF075E54)
+        : const Color(0xFF075E54); // Mantém o verde característico
+    final inputBackgroundColor =
+        isDark ? const Color(0xFF2C2C2C) : Colors.grey[100];
+    final textColor = isDark ? Colors.white : Colors.black87;
+    final hintColor = isDark ? Colors.grey[400] : Colors.grey[600];
+
     return Material(
       type: MaterialType.transparency,
       child: Align(
@@ -65,7 +86,7 @@ class _ChatPageState extends ConsumerState<ChatPage> {
           height: 600,
           margin: const EdgeInsets.all(16),
           decoration: BoxDecoration(
-            color: Colors.white,
+            color: backgroundColor,
             borderRadius: BorderRadius.circular(16),
             boxShadow: [
               BoxShadow(
@@ -80,16 +101,22 @@ class _ChatPageState extends ConsumerState<ChatPage> {
               // Header com nome do contato e botão fechar
               Container(
                 padding: const EdgeInsets.all(16),
-                decoration: const BoxDecoration(
-                  color: Color(0xFF075E54), // Cor verde WhatsApp
-                  borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+                decoration: BoxDecoration(
+                  color: headerColor,
+                  borderRadius:
+                      const BorderRadius.vertical(top: Radius.circular(16)),
                 ),
                 child: Row(
                   children: [
-                    const CircleAvatar(
+                    CircleAvatar(
                       radius: 20,
                       backgroundColor: Colors.white,
-                      child: Icon(Icons.person, color: Color(0xFF075E54)),
+                      backgroundImage: currentLead?.fotoUrl != null
+                          ? NetworkImage(currentLead!.fotoUrl!)
+                          : null,
+                      child: currentLead?.fotoUrl == null
+                          ? const Icon(Icons.person, color: Color(0xFF075E54))
+                          : null,
                     ),
                     const SizedBox(width: 12),
                     Expanded(
@@ -147,7 +174,7 @@ class _ChatPageState extends ConsumerState<ChatPage> {
                         child: Text(
                           'Nenhuma mensagem ainda',
                           style: TextStyle(
-                            color: Colors.black87, // Cor alterada para preto
+                            color: textColor,
                             fontSize: 14,
                           ),
                         ),
@@ -164,7 +191,8 @@ class _ChatPageState extends ConsumerState<ChatPage> {
                       itemCount: mensagens.length,
                       itemBuilder: (context, index) {
                         final mensagem = mensagens[index];
-                        return _MessageBubble(mensagem: mensagem);
+                        return _MessageBubble(
+                            mensagem: mensagem, isDark: isDark);
                       },
                     );
                   },
@@ -175,7 +203,7 @@ class _ChatPageState extends ConsumerState<ChatPage> {
               Container(
                 padding: const EdgeInsets.all(8),
                 decoration: BoxDecoration(
-                  color: Colors.grey[100],
+                  color: inputBackgroundColor,
                   borderRadius:
                       const BorderRadius.vertical(bottom: Radius.circular(16)),
                 ),
@@ -197,17 +225,18 @@ class _ChatPageState extends ConsumerState<ChatPage> {
                             borderSide: BorderSide.none,
                           ),
                           filled: true,
-                          fillColor: Colors.white,
+                          fillColor:
+                              isDark ? const Color(0xFF3D3D3D) : Colors.white,
                           contentPadding: const EdgeInsets.symmetric(
                             horizontal: 16,
                             vertical: 8,
                           ),
                           hintStyle: TextStyle(
-                            color: Colors.grey[600],
+                            color: hintColor,
                           ),
                         ),
-                        style: const TextStyle(
-                          color: Colors.black87,
+                        style: TextStyle(
+                          color: textColor,
                         ),
                         maxLines: null,
                         textCapitalization: TextCapitalization.sentences,
@@ -264,13 +293,22 @@ class _ChatPageState extends ConsumerState<ChatPage> {
 
 class _MessageBubble extends StatelessWidget {
   final MensagemModel mensagem;
+  final bool isDark;
 
-  const _MessageBubble({required this.mensagem});
+  const _MessageBubble({required this.mensagem, required this.isDark});
 
   @override
   Widget build(BuildContext context) {
     final isUsuario = mensagem.isUsuario;
     final time = DateFormat('HH:mm').format(mensagem.dataEnvio);
+
+    // Cores das bolhas
+    final userBubbleColor =
+        isDark ? const Color(0xFF056162) : const Color(0xFFDCF8C6);
+    final otherBubbleColor = isDark ? const Color(0xFF262D31) : Colors.white;
+    final userTextColor = isDark ? Colors.white : Colors.black87;
+    final otherTextColor = isDark ? Colors.white : Colors.black;
+    final timeColor = isDark ? Colors.grey[400] : Colors.grey[600];
 
     return Align(
       alignment: isUsuario ? Alignment.centerRight : Alignment.centerLeft,
@@ -278,7 +316,7 @@ class _MessageBubble extends StatelessWidget {
         margin: const EdgeInsets.symmetric(vertical: 4, horizontal: 8),
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
         decoration: BoxDecoration(
-          color: isUsuario ? const Color(0xFFDCF8C6) : Colors.white,
+          color: isUsuario ? userBubbleColor : otherBubbleColor,
           borderRadius: BorderRadius.only(
             topLeft: const Radius.circular(16),
             topRight: const Radius.circular(16),
@@ -287,7 +325,7 @@ class _MessageBubble extends StatelessWidget {
           ),
           boxShadow: [
             BoxShadow(
-              color: Colors.grey.withOpacity(0.1),
+              color: Colors.black.withOpacity(isDark ? 0.3 : 0.1),
               blurRadius: 2,
               offset: const Offset(0, 1),
             ),
@@ -299,7 +337,7 @@ class _MessageBubble extends StatelessWidget {
             Text(
               mensagem.texto,
               style: TextStyle(
-                color: isUsuario ? Colors.black87 : Colors.black,
+                color: isUsuario ? userTextColor : otherTextColor,
                 fontSize: 14,
               ),
             ),
@@ -310,7 +348,7 @@ class _MessageBubble extends StatelessWidget {
                 Text(
                   time,
                   style: TextStyle(
-                    color: Colors.grey[600],
+                    color: timeColor,
                     fontSize: 10,
                   ),
                 ),

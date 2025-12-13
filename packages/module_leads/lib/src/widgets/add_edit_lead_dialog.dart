@@ -122,6 +122,10 @@ class _AddEditLeadDialogState extends State<AddEditLeadDialog> {
                 status: _status,
                 dataCriacao: widget.lead?.dataCriacao ?? DateTime.now(),
                 observacoes: _observacoesController.text.trim(),
+                funcionarioResponsavelNome:
+                    widget.lead?.funcionarioResponsavelNome,
+                funcionarioId: widget.lead?.funcionarioId,
+                fotoUrl: widget.lead?.fotoUrl,
               );
               widget.onSave(lead);
               Navigator.of(context).pop();

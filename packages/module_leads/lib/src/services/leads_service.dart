@@ -1,6 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../models/lead_model.dart';
+import 'package:module_leads/src/models/lead_model.dart';
 
 final leadsServiceProvider = Provider<LeadsService>((ref) {
   return LeadsService(FirebaseFirestore.instance);
@@ -11,7 +11,6 @@ class LeadsService {
 
   LeadsService(this._firestore);
 
-  // Referência para a subcoleção 'leads' dentro de 'tenant/{tenantId}'
   CollectionReference<LeadModel> _leadsRef(String tenantId) {
     return _firestore
         .collection('tenant')
@@ -23,7 +22,6 @@ class LeadsService {
         );
   }
 
-  // Obter todos os leads (stream)
   Stream<List<LeadModel>> getLeadsStream(String tenantId) {
     return _leadsRef(tenantId)
         .orderBy('data_criacao', descending: true)
@@ -31,17 +29,14 @@ class LeadsService {
         .map((snapshot) => snapshot.docs.map((doc) => doc.data()).toList());
   }
 
-  // Adicionar lead
   Future<void> addLead(LeadModel lead) async {
     await _leadsRef(lead.tenantId).add(lead);
   }
 
-  // Atualizar lead
   Future<void> updateLead(LeadModel lead) async {
     await _leadsRef(lead.tenantId).doc(lead.id).set(lead);
   }
 
-  // Excluir lead
   Future<void> deleteLead(String tenantId, String leadId) async {
     await _leadsRef(tenantId).doc(leadId).delete();
   }

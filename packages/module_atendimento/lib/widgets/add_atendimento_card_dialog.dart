@@ -8,13 +8,8 @@ import 'package:module_leads/module_leads.dart';
 class AddAtendimentoCardDialog extends ConsumerStatefulWidget {
   final String tenantId;
   final List<AtendimentoColumnModel> columns;
-  final Function(
-      String titulo,
-      String clienteNome,
-      String clienteTelefone,
-      String prioridade,
-      String colunaId,
-      String? leadId) onSave;
+  final Function(String titulo, String clienteNome, String clienteTelefone,
+      String prioridade, String colunaId, String? leadId) onSave;
 
   const AddAtendimentoCardDialog({
     super.key,

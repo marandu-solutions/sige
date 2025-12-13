@@ -5,12 +5,13 @@ class LeadModel {
   final String tenantId;
   final String nome;
   final String telefone;
-  final String origem; // Ex: Facebook, Instagram, Site
-  final String status; // Ex: Novo, Em Andamento, Convertido, Perdido
+  final String origem;
+  final String status;
   final DateTime dataCriacao;
   final String? observacoes;
-  final String? funcionario;
+  final String? funcionarioResponsavelNome;
   final String? funcionarioId;
+  final String? fotoUrl;
 
   LeadModel({
     required this.id,
@@ -21,8 +22,9 @@ class LeadModel {
     required this.status,
     required this.dataCriacao,
     this.observacoes,
-    this.funcionario,
+    this.funcionarioResponsavelNome,
     this.funcionarioId,
+    this.fotoUrl,
   });
 
   factory LeadModel.fromFirestore(DocumentSnapshot doc) {
@@ -41,8 +43,10 @@ class LeadModel {
       dataCriacao:
           (map['data_criacao'] as Timestamp?)?.toDate() ?? DateTime.now(),
       observacoes: map['observacoes'],
-      funcionario: map['funcionario'],
+      funcionarioResponsavelNome:
+          map['funcionarioResponsavelNome'] ?? map['funcionario'],
       funcionarioId: map['funcionarioId'],
+      fotoUrl: map['fotoUrl'],
     );
   }
 
@@ -55,8 +59,9 @@ class LeadModel {
       'status': status,
       'data_criacao': Timestamp.fromDate(dataCriacao),
       'observacoes': observacoes,
-      'funcionario': funcionario,
+      'funcionarioResponsavelNome': funcionarioResponsavelNome,
       'funcionarioId': funcionarioId,
+      'fotoUrl': fotoUrl,
     };
   }
 
@@ -69,8 +74,9 @@ class LeadModel {
     String? status,
     DateTime? dataCriacao,
     String? observacoes,
-    String? funcionario,
+    String? funcionarioResponsavelNome,
     String? funcionarioId,
+    String? fotoUrl,
   }) {
     return LeadModel(
       id: id ?? this.id,
@@ -81,8 +87,10 @@ class LeadModel {
       status: status ?? this.status,
       dataCriacao: dataCriacao ?? this.dataCriacao,
       observacoes: observacoes ?? this.observacoes,
-      funcionario: funcionario ?? this.funcionario,
+      funcionarioResponsavelNome:
+          funcionarioResponsavelNome ?? this.funcionarioResponsavelNome,
       funcionarioId: funcionarioId ?? this.funcionarioId,
+      fotoUrl: fotoUrl ?? this.fotoUrl,
     );
   }
 }
