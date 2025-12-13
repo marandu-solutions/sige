@@ -1,9 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:lucide_icons/lucide_icons.dart';
-import 'package:module_admin_empresa/src/models/funcionario_model.dart';
+import 'package:core/core.dart';
 import 'package:module_admin_empresa/src/models/horario_model.dart';
-import 'package:module_admin_empresa/src/models/tenant_model.dart';
 import 'package:module_admin_empresa/src/providers/admin_providers.dart';
 import 'package:module_admin_empresa/src/providers/tenant_provider.dart';
 import 'package:module_admin_empresa/src/screens/components/empresa_profile_form_dialog.dart';

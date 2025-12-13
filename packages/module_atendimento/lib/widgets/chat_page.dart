@@ -1,7 +1,7 @@
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:firebase_storage/firebase_storage.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:lucide_icons/lucide_icons.dart';
 import 'package:intl/intl.dart';
 import 'package:module_atendimento/models/mensagem_model.dart';
 import 'package:module_atendimento/providers/mensagens_provider.dart';
@@ -59,21 +59,33 @@ class _ChatPageState extends ConsumerState<ChatPage> {
 
     // Buscar lead para obter a foto
     final leadsAsync = ref.watch(leadsProvider(widget.tenantId));
+    
+    // Lógica para encontrar o Lead atual
     final currentLead = widget.leadId != null
         ? leadsAsync.valueOrNull
             ?.where((l) => l.id == widget.leadId)
             .firstOrNull
         : null;
 
+    // --- DEBUG LOGS (Verifique seu console) ---
+    if (widget.leadId != null) {
+       print('--- DEBUG AVATAR ---');
+       print('Procurando Lead ID: ${widget.leadId}');
+       print('Status leadsAsync: ${leadsAsync.isLoading ? "Carregando" : "Carregado"}');
+       print('Lead Encontrado? ${currentLead != null ? "SIM" : "NÃO"}');
+       if (currentLead != null) {
+         print('URL da Foto no Lead: "${currentLead.fotoUrl}"');
+       }
+       print('--------------------');
+    }
+    // ------------------------------------------
+
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
 
     final backgroundColor = isDark ? const Color(0xFF1E1E1E) : Colors.white;
-    final headerColor = isDark
-        ? const Color(0xFF075E54)
-        : const Color(0xFF075E54); // Mantém o verde característico
-    final inputBackgroundColor =
-        isDark ? const Color(0xFF2C2C2C) : Colors.grey[100];
+    final headerColor = isDark ? const Color(0xFF075E54) : const Color(0xFF075E54);
+    final inputBackgroundColor = isDark ? const Color(0xFF2C2C2C) : Colors.grey[100];
     final textColor = isDark ? Colors.white : Colors.black87;
     final hintColor = isDark ? Colors.grey[400] : Colors.grey[600];
 
@@ -98,26 +110,18 @@ class _ChatPageState extends ConsumerState<ChatPage> {
           ),
           child: Column(
             children: [
-              // Header com nome do contato e botão fechar
+              // Header
               Container(
                 padding: const EdgeInsets.all(16),
                 decoration: BoxDecoration(
                   color: headerColor,
-                  borderRadius:
-                      const BorderRadius.vertical(top: Radius.circular(16)),
+                  borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
                 ),
                 child: Row(
                   children: [
-                    CircleAvatar(
-                      radius: 20,
-                      backgroundColor: Colors.white,
-                      backgroundImage: currentLead?.fotoUrl != null
-                          ? NetworkImage(currentLead!.fotoUrl!)
-                          : null,
-                      child: currentLead?.fotoUrl == null
-                          ? const Icon(Icons.person, color: Color(0xFF075E54))
-                          : null,
-                    ),
+                    // AQUI ESTÁ O WIDGET DO AVATAR
+                    _LeadAvatar(fotoUrl: currentLead?.fotoUrl),
+                    
                     const SizedBox(width: 12),
                     Expanded(
                       child: Column(
@@ -152,31 +156,17 @@ class _ChatPageState extends ConsumerState<ChatPage> {
               // Lista de mensagens
               Expanded(
                 child: mensagensAsync.when(
-                  loading: () =>
-                      const Center(child: CircularProgressIndicator()),
+                  loading: () => const Center(child: CircularProgressIndicator()),
                   error: (error, stack) {
-                    // Imprime o erro no console para que o link de criação de índice possa ser clicado
                     print('Erro no chat: $error');
-                    return Center(
-                      child: Padding(
-                        padding: const EdgeInsets.all(16.0),
-                        child: Text(
-                          'Erro: $error',
-                          style: const TextStyle(color: Colors.red),
-                          textAlign: TextAlign.center,
-                        ),
-                      ),
-                    );
+                    return Center(child: Text('Erro: $error'));
                   },
                   data: (mensagens) {
                     if (mensagens.isEmpty) {
                       return Center(
                         child: Text(
                           'Nenhuma mensagem ainda',
-                          style: TextStyle(
-                            color: textColor,
-                            fontSize: 14,
-                          ),
+                          style: TextStyle(color: textColor, fontSize: 14),
                         ),
                       );
                     }
@@ -191,29 +181,25 @@ class _ChatPageState extends ConsumerState<ChatPage> {
                       itemCount: mensagens.length,
                       itemBuilder: (context, index) {
                         final mensagem = mensagens[index];
-                        return _MessageBubble(
-                            mensagem: mensagem, isDark: isDark);
+                        return _MessageBubble(mensagem: mensagem, isDark: isDark);
                       },
                     );
                   },
                 ),
               ),
 
-              // Campo de entrada de mensagem
+              // Campo de input
               Container(
                 padding: const EdgeInsets.all(8),
                 decoration: BoxDecoration(
                   color: inputBackgroundColor,
-                  borderRadius:
-                      const BorderRadius.vertical(bottom: Radius.circular(16)),
+                  borderRadius: const BorderRadius.vertical(bottom: Radius.circular(16)),
                 ),
                 child: Row(
                   children: [
                     IconButton(
                       icon: const Icon(Icons.attach_file, color: Colors.grey),
-                      onPressed: () {
-                        // TODO: Implementar envio de anexos
-                      },
+                      onPressed: () {},
                     ),
                     Expanded(
                       child: TextField(
@@ -225,19 +211,11 @@ class _ChatPageState extends ConsumerState<ChatPage> {
                             borderSide: BorderSide.none,
                           ),
                           filled: true,
-                          fillColor:
-                              isDark ? const Color(0xFF3D3D3D) : Colors.white,
-                          contentPadding: const EdgeInsets.symmetric(
-                            horizontal: 16,
-                            vertical: 8,
-                          ),
-                          hintStyle: TextStyle(
-                            color: hintColor,
-                          ),
+                          fillColor: isDark ? const Color(0xFF3D3D3D) : Colors.white,
+                          contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                          hintStyle: TextStyle(color: hintColor),
                         ),
-                        style: TextStyle(
-                          color: textColor,
-                        ),
+                        style: TextStyle(color: textColor),
                         maxLines: null,
                         textCapitalization: TextCapitalization.sentences,
                       ),
@@ -271,23 +249,138 @@ class _ChatPageState extends ConsumerState<ChatPage> {
       tenantId: widget.tenantId,
       atendimentoId: widget.atendimentoId,
       texto: text,
-      isUsuario: true, // Mensagem enviada pelo usuário do sistema
+      isUsuario: true,
       dataEnvio: DateTime.now(),
-      status: 'pending_send', // Marca para envio via Cloud Function/N8N
+      status: 'pending_send',
       telefoneDestino: widget.contactPhone,
       remetenteUid: user?.uid,
       remetenteTipo: 'vendedor',
       leadId: widget.leadId,
     );
 
-    ref
-        .read(mensagensProvider(
-          MensagensParams(
-              tenantId: widget.tenantId, atendimentoId: widget.atendimentoId),
-        ).notifier)
-        .addMensagem(mensagem);
+    ref.read(mensagensProvider(
+      MensagensParams(tenantId: widget.tenantId, atendimentoId: widget.atendimentoId),
+    ).notifier).addMensagem(mensagem);
 
     _messageController.clear();
+  }
+}
+
+// ---------------------------------------------
+// CLASSE LEAD AVATAR CORRIGIDA
+// ---------------------------------------------
+class _LeadAvatar extends StatefulWidget {
+  final String? fotoUrl;
+
+  const _LeadAvatar({this.fotoUrl});
+
+  @override
+  State<_LeadAvatar> createState() => _LeadAvatarState();
+}
+
+class _LeadAvatarState extends State<_LeadAvatar> {
+  String? _downloadUrl;
+  bool _loading = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _checkAndLoad();
+  }
+
+  @override
+  void didUpdateWidget(covariant _LeadAvatar oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.fotoUrl != widget.fotoUrl) {
+      _checkAndLoad();
+    }
+  }
+
+  Future<void> _checkAndLoad() async {
+    final url = widget.fotoUrl;
+
+    // Se nulo ou vazio, reseta
+    if (url == null || url.isEmpty) {
+      if (mounted) setState(() => _downloadUrl = null);
+      return;
+    }
+
+    // Se já for HTTP (Google/Facebook/Link externo)
+    if (url.startsWith('http')) {
+      if (mounted) setState(() => _downloadUrl = url);
+      return;
+    }
+
+    // Se for caminho do Storage
+    await _loadImageFromStorage(url);
+  }
+
+  Future<void> _loadImageFromStorage(String path) async {
+    if (_loading) return; // Evita chamadas duplicadas
+
+    setState(() {
+      _loading = true;
+      _downloadUrl = null; // Limpa url anterior enquanto carrega a nova
+    });
+
+    print('Storage: Tentando baixar imagem do caminho: $path');
+
+    try {
+      // Cria a referência baseada no caminho salvo no Firestore (ex: Leads_Photos/teste.jpg)
+      final ref = FirebaseStorage.instance.ref().child(path);
+      
+      final url = await ref.getDownloadURL();
+      print('Storage: URL gerada com sucesso: $url');
+
+      if (mounted) {
+        setState(() {
+          _downloadUrl = url;
+          _loading = false;
+        });
+      }
+    } catch (e) {
+      print('Storage ERRO: Falha ao baixar imagem: $e');
+      if (mounted) {
+        setState(() {
+          _loading = false;
+          _downloadUrl = null;
+        });
+      }
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    // 1. Loading
+    if (_loading) {
+      return const CircleAvatar(
+        radius: 20,
+        backgroundColor: Colors.white,
+        child: Padding(
+          padding: EdgeInsets.all(8.0),
+          child: CircularProgressIndicator(strokeWidth: 2),
+        ),
+      );
+    }
+
+    // 2. Imagem Carregada
+    if (_downloadUrl != null) {
+      return CircleAvatar(
+        radius: 20,
+        backgroundColor: Colors.white,
+        backgroundImage: NetworkImage(_downloadUrl!),
+        onBackgroundImageError: (exception, stackTrace) {
+           print('Erro ao renderizar NetworkImage: $exception');
+        },
+      );
+    }
+
+    // 3. Fallback (Ícone Padrão)
+    return const CircleAvatar(
+      radius: 20,
+      backgroundColor: Colors.white,
+      child: Icon(Icons.person, color: Color(0xFF075E54)),
+    );
   }
 }
 
@@ -302,9 +395,7 @@ class _MessageBubble extends StatelessWidget {
     final isUsuario = mensagem.isUsuario;
     final time = DateFormat('HH:mm').format(mensagem.dataEnvio);
 
-    // Cores das bolhas
-    final userBubbleColor =
-        isDark ? const Color(0xFF056162) : const Color(0xFFDCF8C6);
+    final userBubbleColor = isDark ? const Color(0xFF056162) : const Color(0xFFDCF8C6);
     final otherBubbleColor = isDark ? const Color(0xFF262D31) : Colors.white;
     final userTextColor = isDark ? Colors.white : Colors.black87;
     final otherTextColor = isDark ? Colors.white : Colors.black;
@@ -347,10 +438,7 @@ class _MessageBubble extends StatelessWidget {
               children: [
                 Text(
                   time,
-                  style: TextStyle(
-                    color: timeColor,
-                    fontSize: 10,
-                  ),
+                  style: TextStyle(color: timeColor, fontSize: 10),
                 ),
                 if (isUsuario) ...[
                   const SizedBox(width: 4),
@@ -365,32 +453,13 @@ class _MessageBubble extends StatelessWidget {
   }
 
   Widget _buildStatusIcon(String status) {
-    // 1 check (cinza) quando a msg é registrada no bd
     if (status == 'pending_send') {
-      return const Icon(
-        Icons.check,
-        size: 14,
-        color: Colors.grey,
-      );
+      return const Icon(Icons.check, size: 14, color: Colors.grey);
+    } else if (status == 'sent') {
+      return const Icon(Icons.done_all, size: 14, color: Colors.grey);
+    } else if (status == 'error') {
+      return const Icon(Icons.error_outline, size: 14, color: Colors.red);
     }
-    // 2 checks (cinza), quando enviada para o n8n
-    else if (status == 'sent') {
-      return const Icon(
-        Icons.done_all,
-        size: 14,
-        color: Colors.grey,
-      );
-    }
-    // icone de erro (circulo com ! dentro) quando houver um erro no envio
-    else if (status == 'error') {
-      return const Icon(
-        Icons.error_outline,
-        size: 14,
-        color: Colors.red,
-      );
-    }
-
-    // Default fallback (e.g. unknown status)
     return const SizedBox.shrink();
   }
 }

@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:lucide_icons/lucide_icons.dart';
-import 'package:module_admin_empresa/src/models/tenant_model.dart';
+import 'package:core/core.dart';
 
 class EmpresaProfileFormDialog extends StatefulWidget {
   final TenantModel empresa;

@@ -1,5 +1,5 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:module_leads/src/models/lead_model.dart';
+import 'package:core/core.dart';
 import 'leads_provider.dart';
 
 class LeadsFilter {

@@ -37,7 +37,8 @@ dependencies:
   firebase_core: ^4.2.1
   firebase_auth: ^6.1.2
   cloud_firestore: ^6.1.0
-
+  core:
+    path: packages/core
   module_auth:
     path: packages/module_auth
   module_basic_dashboard:

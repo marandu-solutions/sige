@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:lucide_icons/lucide_icons.dart';
-import 'package:module_admin_empresa/src/models/funcionario_model.dart';
+import 'package:core/core.dart';
 import 'package:module_atendimento/module_atendimento.dart';
 
 class FuncionarioAtendimentoColumn extends StatelessWidget {

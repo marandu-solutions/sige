@@ -1,6 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:module_leads/src/models/lead_model.dart';
+import 'package:core/core.dart';
 
 final leadsServiceProvider = Provider<LeadsService>((ref) {
   return LeadsService(FirebaseFirestore.instance);

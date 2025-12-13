@@ -2,9 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:lucide_icons/lucide_icons.dart';
 import 'dart:math';
-import 'package:module_admin_empresa/module_admin_empresa.dart'; // Ensure this exports providers/models
-import 'package:module_admin_empresa/src/models/funcionario_model.dart'; // Direct import if needed
-import 'package:module_admin_empresa/src/providers/admin_providers.dart'; // Direct import if needed
+import 'package:core/core.dart';
+import 'package:module_admin_empresa/module_admin_empresa.dart';
+import 'package:module_admin_empresa/src/providers/admin_providers.dart';
 import 'package:module_atendimento/module_atendimento.dart';
 import 'components/funcionario_atendimento_column.dart';
 import 'components/add_lead_gerente_dialog.dart';

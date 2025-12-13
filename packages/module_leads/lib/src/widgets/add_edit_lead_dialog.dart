@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:module_leads/src/models/lead_model.dart';
+import 'package:core/core.dart';
 
 class AddEditLeadDialog extends StatefulWidget {
   final String tenantId;
