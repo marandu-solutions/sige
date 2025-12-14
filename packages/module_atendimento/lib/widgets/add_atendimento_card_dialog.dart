@@ -8,8 +8,14 @@ import 'package:module_leads/module_leads.dart';
 class AddAtendimentoCardDialog extends ConsumerStatefulWidget {
   final String tenantId;
   final List<AtendimentoColumnModel> columns;
-  final Function(String titulo, String clienteNome, String clienteTelefone,
-      String prioridade, String colunaId, String? leadId) onSave;
+  final Function(
+      String titulo,
+      String clienteNome,
+      String clienteTelefone,
+      String prioridade,
+      String colunaId,
+      String? leadId,
+      String? fotoUrl) onSave;
 
   const AddAtendimentoCardDialog({
     super.key,
@@ -29,9 +35,11 @@ class _AddAtendimentoCardDialogState
   final _tituloController = TextEditingController();
   final _clienteNomeController = TextEditingController();
   final _clienteTelefoneController = TextEditingController();
+  final _fotoUrlController = TextEditingController();
   String _colunaId = '';
   String _prioridade = 'media';
   String? _selectedLeadId;
+  String? _fotoUrl;
 
   @override
   void initState() {
@@ -44,6 +52,7 @@ class _AddAtendimentoCardDialogState
     _tituloController.dispose();
     _clienteNomeController.dispose();
     _clienteTelefoneController.dispose();
+    _fotoUrlController.dispose();
     super.dispose();
   }
 
@@ -52,6 +61,8 @@ class _AddAtendimentoCardDialogState
       _selectedLeadId = lead.id;
       _clienteNomeController.text = lead.nome;
       _clienteTelefoneController.text = lead.telefone;
+      _fotoUrl = lead.fotoUrl;
+      _fotoUrlController.text = lead.fotoUrl ?? '';
 
       // Auto-fill title if empty
       if (_tituloController.text.isEmpty) {
@@ -203,6 +214,17 @@ class _AddAtendimentoCardDialogState
               ),
               const SizedBox(height: 16),
 
+              // Foto URL (Opcional)
+              TextFormField(
+                controller: _fotoUrlController,
+                decoration: const InputDecoration(
+                  labelText: 'URL da Foto (Opcional)',
+                  prefixIcon: Icon(LucideIcons.image),
+                ),
+                onChanged: (value) => _fotoUrl = value,
+              ),
+              const SizedBox(height: 16),
+
               // Coluna
               DropdownButtonFormField<String>(
                 value: _colunaId,
@@ -280,6 +302,7 @@ class _AddAtendimentoCardDialogState
                 _prioridade,
                 _colunaId,
                 _selectedLeadId,
+                _fotoUrl,
               );
               Navigator.of(context).pop();
             }

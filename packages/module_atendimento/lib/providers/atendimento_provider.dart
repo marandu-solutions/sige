@@ -2,7 +2,7 @@ import 'dart:async';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:module_atendimento/models/atendimento_board_model.dart';
-import 'package:module_atendimento/models/atendimento_card_model.dart';
+import 'package:module_atendimento/models/atendimento_model.dart';
 import 'package:module_atendimento/models/atendimento_column_model.dart';
 import 'package:module_atendimento/models/mensagem_model.dart';
 import 'package:module_atendimento/services/atendimento_service.dart';
@@ -40,7 +40,7 @@ class AtendimentoNotifier
     // Verificação de Consistência: Cards órfãos (com coluna_status inválido)
     if (board.columns.isNotEmpty) {
       final validColumnIds = board.columns.map((c) => c.id).toSet();
-      final fixedCards = <AtendimentoCardModel>[];
+      final fixedCards = <AtendimentoModel>[];
       bool hasFixes = false;
 
       for (final card in board.cards) {
@@ -67,7 +67,7 @@ class AtendimentoNotifier
     return board;
   }
 
-  Future<void> addCard(AtendimentoCardModel card) async {
+  Future<void> addCard(AtendimentoModel card) async {
     final atendimentoService = ref.read(atendimentoServiceProvider);
 
     // Atualiza o estado localmente sem loading
@@ -300,6 +300,32 @@ class AtendimentoNotifier
     } catch (e) {
       // Se houver erro, recarrega o board completo
       state = await AsyncValue.guard(() => _getBoard(arg));
+    }
+  }
+
+  Future<void> resetUnreadCount(String cardId) async {
+    final atendimentoService = ref.read(atendimentoServiceProvider);
+    final tenantId = arg;
+
+    // Atualiza o estado localmente sem loading
+    final currentBoard = state.valueOrNull;
+    if (currentBoard != null) {
+      final updatedCards = currentBoard.cards.map((card) {
+        if (card.id == cardId) {
+          return card.copyWith(mensagensNaoLidas: 0);
+        }
+        return card;
+      }).toList();
+
+      state = AsyncValue.data(currentBoard.copyWith(cards: updatedCards));
+    }
+
+    // Atualiza no Firebase em background
+    try {
+      await atendimentoService.marcarMensagensComoLidas(tenantId, cardId);
+    } catch (e) {
+      // Se houver erro, recarrega o board completo
+      state = await AsyncValue.guard(() => _getBoard(tenantId));
     }
   }
 }

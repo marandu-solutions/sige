@@ -127,7 +127,7 @@ class _GerenteAtendimentoScreenState
         funcionarios: funcionariosAsync.value ?? [],
         onSave: (titulo, clienteNome, clienteTelefone, prioridade, dataLimite,
             colunaId, funcionarioId, leadId) {
-          final newCard = AtendimentoCardModel(
+          final newCard = AtendimentoModel(
             id: 'temp_${Random().nextInt(1000000)}',
             tenantId: widget.tenantId,
             titulo: titulo,
@@ -136,6 +136,9 @@ class _GerenteAtendimentoScreenState
             colunaStatus: colunaId,
             prioridade: prioridade,
             dataCriacao: DateTime.now(),
+            dataUltimaAtualizacao: DateTime.now(),
+            dataEntradaColuna: DateTime.now(),
+            status: 'ativo',
             ultimaMensagem: '',
             ultimaMensagemData: DateTime.now(),
             mensagensNaoLidas: 0,

@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
-import 'package:module_atendimento/models/atendimento_card_model.dart';
+import 'package:module_atendimento/models/atendimento_model.dart';
 import 'package:lucide_icons/lucide_icons.dart';
 import 'package:intl/intl.dart';
 
 /// Widget de cartão de atendimento individual (Somente Leitura - Sem Draggable)
 class ReadOnlyAtendimentoCardWidget extends StatelessWidget {
-  final AtendimentoCardModel card;
+  final AtendimentoModel card;
   final Color color;
   final VoidCallback onTap;
 

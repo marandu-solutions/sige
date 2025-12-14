@@ -1,15 +1,15 @@
 import 'package:flutter/material.dart';
-import 'package:module_atendimento/models/atendimento_card_model.dart';
+import 'package:module_atendimento/models/atendimento_model.dart';
 import 'package:module_atendimento/models/atendimento_column_model.dart';
 import 'package:module_atendimento/widgets/atendimento_card_widget.dart';
 import 'package:lucide_icons/lucide_icons.dart';
 
 class AtendimentoColumn extends StatefulWidget {
   final AtendimentoColumnModel column;
-  final List<AtendimentoCardModel> cards;
+  final List<AtendimentoModel> cards;
   final Function(String, String) onCardMove;
   final VoidCallback onEdit;
-  final Function(AtendimentoCardModel) onCardTap;
+  final Function(AtendimentoModel) onCardTap;
   final int columnIndex;
 
   const AtendimentoColumn({
@@ -60,7 +60,7 @@ class _AtendimentoColumnState extends State<AtendimentoColumn>
     final colorScheme = Theme.of(context).colorScheme;
     final textTheme = Theme.of(context).textTheme;
 
-    return DragTarget<AtendimentoCardModel>(
+    return DragTarget<AtendimentoModel>(
       onWillAcceptWithDetails: (details) {
         if (details.data.colunaStatus == widget.column.id) return false;
         setState(() => _isCardDraggingOver = true);

@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:module_atendimento/models/atendimento_column_model.dart';
-import 'package:module_atendimento/models/atendimento_card_model.dart';
+import 'package:module_atendimento/models/atendimento_model.dart';
 import 'package:module_atendimento/providers/atendimento_provider.dart';
 import 'package:module_atendimento/widgets/add_edit_atendimento_column_dialog.dart';
 import 'package:module_atendimento/widgets/atendimento_column.dart';
@@ -27,7 +27,7 @@ class AtendimentoScreen extends ConsumerStatefulWidget {
 
 class _AtendimentoScreenState extends ConsumerState<AtendimentoScreen> {
   late final ScrollController _scrollController;
-  AtendimentoCardModel? _cardSelecionado;
+  AtendimentoModel? _cardSelecionado;
 
   @override
   void initState() {
@@ -154,6 +154,7 @@ class _AtendimentoScreenState extends ConsumerState<AtendimentoScreen> {
                   contactName: _cardSelecionado!.clienteNome,
                   contactPhone: _cardSelecionado!.clienteTelefone,
                   leadId: _cardSelecionado!.leadId,
+                  fotoUrl: _cardSelecionado!.fotoUrl,
                   onClose: () {
                     setState(() {
                       _cardSelecionado = null;
@@ -167,7 +168,12 @@ class _AtendimentoScreenState extends ConsumerState<AtendimentoScreen> {
     );
   }
 
-  void _handleCardTap(AtendimentoCardModel card) {
+  void _handleCardTap(AtendimentoModel card) {
+    if (card.mensagensNaoLidas > 0) {
+      ref
+          .read(atendimentoProvider(widget.tenantId).notifier)
+          .resetUnreadCount(card.id);
+    }
     setState(() {
       _cardSelecionado = card;
     });
@@ -236,8 +242,8 @@ class _AtendimentoScreenState extends ConsumerState<AtendimentoScreen> {
         tenantId: widget.tenantId,
         columns: atendimentoAsync.valueOrNull!.columns,
         onSave: (titulo, clienteNome, clienteTelefone, prioridade, colunaId,
-            leadId) {
-          final newCard = AtendimentoCardModel(
+            leadId, fotoUrl) {
+          final newCard = AtendimentoModel(
             id: 'temp_${Random().nextInt(1000000)}',
             tenantId: widget.tenantId,
             titulo: titulo,
@@ -246,10 +252,14 @@ class _AtendimentoScreenState extends ConsumerState<AtendimentoScreen> {
             colunaStatus: colunaId,
             prioridade: prioridade,
             dataCriacao: DateTime.now(),
+            dataUltimaAtualizacao: DateTime.now(),
+            dataEntradaColuna: DateTime.now(),
+            status: 'ativo',
             ultimaMensagem: '',
             ultimaMensagemData: DateTime.now(),
             mensagensNaoLidas: 0,
             leadId: leadId,
+            fotoUrl: fotoUrl,
           );
           ref
               .read(atendimentoProvider(widget.tenantId).notifier)

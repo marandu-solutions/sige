@@ -1,11 +1,12 @@
 import 'package:flutter/material.dart';
-import 'package:module_atendimento/models/atendimento_card_model.dart';
+import 'package:module_atendimento/models/atendimento_model.dart';
+import 'package:module_atendimento/widgets/atendimento_avatar.dart';
 import 'package:lucide_icons/lucide_icons.dart';
 import 'package:intl/intl.dart';
 
 /// Widget de cartão de atendimento individual
 class AtendimentoCardWidget extends StatelessWidget {
-  final AtendimentoCardModel card;
+  final AtendimentoModel card;
   final Color color;
   final VoidCallback onTap;
 
@@ -23,7 +24,7 @@ class AtendimentoCardWidget extends StatelessWidget {
 
     final priorityColor = _getPriorityColor(colorScheme);
 
-    return Draggable<AtendimentoCardModel>(
+    return Draggable<AtendimentoModel>(
       data: card,
       feedback: Material(
         elevation: 4.0,
@@ -83,7 +84,11 @@ class AtendimentoCardWidget extends StatelessWidget {
                       ),
                     ),
                     const Spacer(),
-                    const SizedBox(width: 4),
+                    if (card.fotoUrl != null && card.fotoUrl!.isNotEmpty)
+                      AtendimentoAvatar(
+                        fotoUrl: card.fotoUrl,
+                        radius: 12,
+                      ),
                   ],
                 ),
                 const SizedBox(height: 8),
@@ -167,17 +172,21 @@ class AtendimentoCardWidget extends StatelessWidget {
                         if (card.mensagensNaoLidas > 0) ...[
                           const SizedBox(width: 8),
                           Container(
-                            padding: const EdgeInsets.symmetric(
-                                horizontal: 8, vertical: 4),
-                            decoration: BoxDecoration(
-                              color: colorScheme.primary,
-                              borderRadius: BorderRadius.circular(12),
+                            width: 20,
+                            height: 20,
+                            decoration: const BoxDecoration(
+                              color: Colors.blue,
+                              shape: BoxShape.circle,
                             ),
+                            alignment: Alignment.center,
                             child: Text(
-                              card.mensagensNaoLidas.toString(),
+                              card.mensagensNaoLidas > 99
+                                  ? '+99'
+                                  : card.mensagensNaoLidas.toString(),
                               style: textTheme.bodySmall?.copyWith(
                                 color: Colors.white,
                                 fontWeight: FontWeight.bold,
+                                fontSize: 10,
                               ),
                             ),
                           ),

@@ -2,7 +2,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:module_atendimento/models/atendimento_board_model.dart';
-import 'package:module_atendimento/models/atendimento_card_model.dart';
+import 'package:module_atendimento/models/atendimento_model.dart';
 import 'package:module_atendimento/models/atendimento_column_model.dart';
 import 'package:module_atendimento/models/mensagem_model.dart';
 
@@ -16,34 +16,25 @@ class AtendimentoService {
   AtendimentoService(this._firestore);
 
   // Coleções
-  CollectionReference<AtendimentoCardModel> _cardsRef(String tenantId) =>
-      _firestore
-          .collection('tenant')
-          .doc(tenantId)
-          .collection('atendimento')
-          .doc('board')
-          .collection('cards')
-          .withConverter<AtendimentoCardModel>(
-            fromFirestore: (snapshot, _) =>
-                AtendimentoCardModel.fromFirestore(snapshot),
-            toFirestore: (card, _) => card.toMap(),
-          );
+  CollectionReference<AtendimentoModel> _cardsRef(String tenantId) => _firestore
+      .collection('tenant')
+      .doc(tenantId)
+      .collection('atendimento')
+      .doc('board')
+      .collection('historico')
+      .withConverter<AtendimentoModel>(
+        fromFirestore: (snapshot, _) =>
+            AtendimentoModel.fromFirestore(snapshot),
+        toFirestore: (card, _) => card.toMap(),
+      );
 
   CollectionReference<AtendimentoColumnModel> _columnsRef(String tenantId) {
-    final user = FirebaseAuth.instance.currentUser;
-
-    // GARANTIA DE CONSISTÊNCIA: Sempre usa o board individual do usuário.
-    // Se não houver usuário logado, lança erro para evitar fallback para board compartilhado incorreto.
-    if (user == null) {
-      throw Exception('Usuário não autenticado ao acessar colunas.');
-    }
-
     return _firestore
         .collection('tenant')
         .doc(tenantId)
-        .collection('users')
-        .doc(user.uid)
-        .collection('atendimento_board_columns')
+        .collection('atendimento')
+        .doc('board')
+        .collection('columns')
         .withConverter<AtendimentoColumnModel>(
           fromFirestore: (snapshot, _) =>
               AtendimentoColumnModel.fromFirestore(snapshot),
@@ -64,18 +55,65 @@ class AtendimentoService {
 
   // Operações do Board
   Future<AtendimentoBoardModel> getBoard(String tenantId) async {
-    final cardsFuture = getCards(tenantId);
     final columnsFuture = getColumns(tenantId);
+    // Busca os cards (getCards já filtra os arquivados)
+    var cardsFuture = getCards(tenantId);
 
     final results = await Future.wait([cardsFuture, columnsFuture]);
+    var cards = results[0] as List<AtendimentoModel>;
+    final columns = results[1] as List<AtendimentoColumnModel>;
+
+    // Lógica de Limpeza: Arquivar cards na coluna "Finalizados" > 24h
+    // Procura por coluna que contenha "Finalizado" ou "Concluido" no título (case insensitive)
+    AtendimentoColumnModel? finalizadosColumn;
+    try {
+      finalizadosColumn = columns.firstWhere(
+        (c) {
+          final title = c.title.toLowerCase();
+          return title.contains('finalizado') || title.contains('concluido');
+        },
+      );
+    } catch (_) {
+      // Nenhuma coluna de finalizados encontrada
+    }
+
+    if (finalizadosColumn != null) {
+      final now = DateTime.now();
+      final cardsToArchive = <AtendimentoModel>[];
+      final finalizadosId = finalizadosColumn.id;
+
+      for (final card in cards) {
+        if (card.colunaStatus == finalizadosId &&
+            card.dataEntradaColuna != null) {
+          final diff = now.difference(card.dataEntradaColuna!);
+          if (diff.inHours >= 24) {
+            cardsToArchive.add(card);
+          }
+        }
+      }
+
+      if (cardsToArchive.isNotEmpty) {
+        // Arquiva no Firestore
+        for (final card in cardsToArchive) {
+          await _archiveCard(tenantId, card.id);
+        }
+
+        // Remove da lista local para atualizar a UI imediatamente
+        cards = cards
+            .where(
+                (c) => !cardsToArchive.any((archived) => archived.id == c.id))
+            .toList();
+      }
+    }
+
     return AtendimentoBoardModel(
-      cards: results[0] as List<AtendimentoCardModel>,
-      columns: results[1] as List<AtendimentoColumnModel>,
+      cards: cards,
+      columns: columns,
     );
   }
 
   // Operações de Cards
-  Future<List<AtendimentoCardModel>> getCards(String tenantId) async {
+  Future<List<AtendimentoModel>> getCards(String tenantId) async {
     final user = FirebaseAuth.instance.currentUser;
     if (user == null) return [];
 
@@ -83,10 +121,15 @@ class AtendimentoService {
     final snapshot = await _cardsRef(tenantId)
         .where('funcionario_responsavel_id', isEqualTo: user.uid)
         .get();
-    return snapshot.docs.map((doc) => doc.data()).toList();
+
+    // Filtra localmente cards arquivados
+    return snapshot.docs
+        .map((doc) => doc.data())
+        .where((card) => card.status != 'arquivado')
+        .toList();
   }
 
-  Future<String> addCard(AtendimentoCardModel card) async {
+  Future<String> addCard(AtendimentoModel card) async {
     final user = FirebaseAuth.instance.currentUser;
 
     // Se o card não tiver funcionário responsável, atribui ao usuário atual (caso o próprio funcionário crie)
@@ -98,15 +141,20 @@ class AtendimentoService {
     return docRef.id;
   }
 
-  Future<void> updateCard(AtendimentoCardModel card) async {
-    await _cardsRef(card.tenantId).doc(card.id).set(card);
+  Future<void> updateCard(AtendimentoModel card) async {
+    final cardToSave = card.copyWith(
+      dataUltimaAtualizacao: DateTime.now(),
+    );
+    await _cardsRef(card.tenantId).doc(card.id).set(cardToSave);
   }
 
   Future<void> updateCardStatus(
-      String tenantId, String cardId, String newStatus) async {
-    // newStatus é o ID da nova coluna
+      String tenantId, String cardId, String newColumnId) async {
+    // Ao mover de coluna, atualizamos data_entrada_coluna
     await _cardsRef(tenantId).doc(cardId).update({
-      'coluna_status': newStatus,
+      'coluna_status': newColumnId,
+      'data_entrada_coluna': FieldValue.serverTimestamp(),
+      'data_ultima_atualizacao': FieldValue.serverTimestamp(),
     });
   }
 
@@ -114,6 +162,15 @@ class AtendimentoService {
       String tenantId, String cardId, String newPriority) async {
     await _cardsRef(tenantId).doc(cardId).update({
       'prioridade': newPriority,
+      'data_ultima_atualizacao': FieldValue.serverTimestamp(),
+    });
+  }
+
+  // Método interno para arquivar (Soft Delete do Kanban)
+  Future<void> _archiveCard(String tenantId, String cardId) async {
+    await _cardsRef(tenantId).doc(cardId).update({
+      'status': 'arquivado',
+      'data_ultima_atualizacao': FieldValue.serverTimestamp(),
     });
   }
 
@@ -154,7 +211,11 @@ class AtendimentoService {
         .get();
 
     for (final doc in cardsSnapshot.docs) {
-      batch.update(doc.reference, {'coluna_status': targetColumnId});
+      batch.update(doc.reference, {
+        'coluna_status': targetColumnId,
+        'data_entrada_coluna': FieldValue.serverTimestamp(),
+        'data_ultima_atualizacao': FieldValue.serverTimestamp(),
+      });
     }
 
     // Deleta a coluna
@@ -205,6 +266,7 @@ class AtendimentoService {
       'ultima_mensagem': mensagem.texto,
       'ultima_mensagem_data': Timestamp.fromDate(mensagem.dataEnvio),
       'mensagens_nao_lidas': FieldValue.increment(mensagem.isUsuario ? 0 : 1),
+      'data_ultima_atualizacao': FieldValue.serverTimestamp(),
     });
   }
 

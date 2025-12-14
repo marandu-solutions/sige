@@ -5,7 +5,7 @@ import 'package:module_atendimento/module_atendimento.dart';
 
 class FuncionarioAtendimentoColumn extends StatelessWidget {
   final FuncionarioModel funcionario;
-  final List<AtendimentoCardModel> cards;
+  final List<AtendimentoModel> cards;
   final VoidCallback onExpand;
 
   const FuncionarioAtendimentoColumn({

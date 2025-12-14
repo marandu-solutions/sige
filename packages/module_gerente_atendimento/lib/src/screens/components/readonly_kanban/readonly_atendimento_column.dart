@@ -1,13 +1,13 @@
 import 'package:flutter/material.dart';
-import 'package:module_atendimento/models/atendimento_card_model.dart';
+import 'package:module_atendimento/models/atendimento_model.dart';
 import 'package:module_atendimento/models/atendimento_column_model.dart';
 import 'package:lucide_icons/lucide_icons.dart';
 import 'readonly_atendimento_card_widget.dart';
 
 class ReadOnlyAtendimentoColumn extends StatelessWidget {
   final AtendimentoColumnModel column;
-  final List<AtendimentoCardModel> cards;
-  final Function(AtendimentoCardModel) onCardTap;
+  final List<AtendimentoModel> cards;
+  final Function(AtendimentoModel) onCardTap;
 
   const ReadOnlyAtendimentoColumn({
     super.key,

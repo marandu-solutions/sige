@@ -22,7 +22,7 @@ class ReadOnlyAtendimentoScreen extends ConsumerStatefulWidget {
 class _ReadOnlyAtendimentoScreenState
     extends ConsumerState<ReadOnlyAtendimentoScreen> {
   late final ScrollController _scrollController;
-  AtendimentoCardModel? _cardSelecionado;
+  AtendimentoModel? _cardSelecionado;
 
   @override
   void initState() {
@@ -117,7 +117,7 @@ class _ReadOnlyAtendimentoScreenState
     );
   }
 
-  void _handleCardTap(AtendimentoCardModel card) {
+  void _handleCardTap(AtendimentoModel card) {
     setState(() {
       _cardSelecionado = card;
     });
