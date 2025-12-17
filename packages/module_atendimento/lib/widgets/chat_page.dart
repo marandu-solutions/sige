@@ -266,6 +266,9 @@ class _MessageBubble extends StatelessWidget {
   Widget build(BuildContext context) {
     final isUsuario = mensagem.isUsuario;
     final time = DateFormat('HH:mm').format(mensagem.dataEnvio);
+    final hasAttachment =
+        mensagem.anexoUrl != null && mensagem.anexoUrl!.isNotEmpty;
+    final isImageMessage = mensagem.mensagemTipo == 'ImageMessage';
 
     final userBubbleColor =
         isDark ? const Color(0xFF056162) : const Color(0xFFDCF8C6);
@@ -278,7 +281,9 @@ class _MessageBubble extends StatelessWidget {
       alignment: isUsuario ? Alignment.centerRight : Alignment.centerLeft,
       child: Container(
         margin: const EdgeInsets.symmetric(vertical: 4, horizontal: 8),
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+        padding: hasAttachment
+            ? const EdgeInsets.all(4)
+            : const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
         decoration: BoxDecoration(
           color: isUsuario ? userBubbleColor : otherBubbleColor,
           borderRadius: BorderRadius.only(
@@ -298,40 +303,126 @@ class _MessageBubble extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.end,
           children: [
-            Text(
-              mensagem.texto,
-              style: TextStyle(
-                color: isUsuario ? userTextColor : otherTextColor,
-                fontSize: 14,
-              ),
-            ),
-            const SizedBox(height: 4),
-            Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Text(
-                  time,
-                  style: TextStyle(color: timeColor, fontSize: 10),
+            if (hasAttachment) ...[
+              Padding(
+                padding: isImageMessage
+                    ? EdgeInsets.zero
+                    : const EdgeInsets.only(bottom: 4.0),
+                child: Stack(
+                  children: [
+                    ClipRRect(
+                      borderRadius: BorderRadius.circular(12),
+                      child: Image.network(
+                        mensagem.anexoUrl!,
+                        fit: BoxFit.cover,
+                        loadingBuilder: (context, child, loadingProgress) {
+                          if (loadingProgress == null) return child;
+                          return SizedBox(
+                            width: 200,
+                            height: 200,
+                            child: Center(
+                              child: CircularProgressIndicator(
+                                value: loadingProgress.expectedTotalBytes !=
+                                        null
+                                    ? loadingProgress.cumulativeBytesLoaded /
+                                        loadingProgress.expectedTotalBytes!
+                                    : null,
+                              ),
+                            ),
+                          );
+                        },
+                        errorBuilder: (context, error, stackTrace) {
+                          return Container(
+                            width: 200,
+                            height: 200,
+                            color: Colors.grey[300],
+                            child: const Icon(Icons.broken_image, size: 50),
+                          );
+                        },
+                      ),
+                    ),
+                    if (isImageMessage)
+                      Positioned(
+                        bottom: 6,
+                        right: 6,
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 6, vertical: 2),
+                          decoration: BoxDecoration(
+                            color: Colors.black38,
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Text(
+                                time,
+                                style: const TextStyle(
+                                    color: Colors.white, fontSize: 10),
+                              ),
+                              if (isUsuario) ...[
+                                const SizedBox(width: 4),
+                                _buildStatusIcon(mensagem.status,
+                                    forceWhite: true),
+                              ],
+                            ],
+                          ),
+                        ),
+                      ),
+                  ],
                 ),
-                if (isUsuario) ...[
-                  const SizedBox(width: 4),
-                  _buildStatusIcon(mensagem.status),
-                ],
-              ],
-            ),
+              ),
+            ],
+            if (mensagem.texto.isNotEmpty)
+              Padding(
+                padding: hasAttachment
+                    ? const EdgeInsets.symmetric(horizontal: 4)
+                    : EdgeInsets.zero,
+                child: Text(
+                  mensagem.texto,
+                  style: TextStyle(
+                    color: isUsuario ? userTextColor : otherTextColor,
+                    fontSize: 14,
+                  ),
+                ),
+              ),
+            if (!isImageMessage) ...[
+              const SizedBox(height: 4),
+              Padding(
+                padding: hasAttachment
+                    ? const EdgeInsets.symmetric(horizontal: 4)
+                    : EdgeInsets.zero,
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      time,
+                      style: TextStyle(color: timeColor, fontSize: 10),
+                    ),
+                    if (isUsuario) ...[
+                      const SizedBox(width: 4),
+                      _buildStatusIcon(mensagem.status),
+                    ],
+                  ],
+                ),
+              ),
+            ],
           ],
         ),
       ),
     );
   }
 
-  Widget _buildStatusIcon(String status) {
+  Widget _buildStatusIcon(String status, {bool forceWhite = false}) {
+    final color = forceWhite
+        ? Colors.white
+        : (status == 'error' ? Colors.red : Colors.grey);
     if (status == 'pending_send') {
-      return const Icon(Icons.check, size: 14, color: Colors.grey);
+      return Icon(Icons.check, size: 14, color: color);
     } else if (status == 'sent') {
-      return const Icon(Icons.done_all, size: 14, color: Colors.grey);
+      return Icon(Icons.done_all, size: 14, color: color);
     } else if (status == 'error') {
-      return const Icon(Icons.error_outline, size: 14, color: Colors.red);
+      return Icon(Icons.error_outline, size: 14, color: color);
     }
     return const SizedBox.shrink();
   }

@@ -280,7 +280,7 @@ class AtendimentoService {
   // Envio de Mensagem para Integração (N8N)
   Future<void> sendMessage(
       String tenantId, String atendimentoId, String customerPhone, String text,
-      {String? leadId}) async {
+      {String? leadId, String? mensagemTipo}) async {
     try {
       final user = FirebaseAuth.instance.currentUser;
       if (user == null) {
@@ -299,6 +299,7 @@ class AtendimentoService {
         remetenteTipo: 'vendedor',
         telefoneDestino: customerPhone,
         leadId: leadId,
+        mensagemTipo: mensagemTipo,
       );
 
       // Salva na coleção de interações do tenant
