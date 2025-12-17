@@ -6,6 +6,7 @@ import 'package:intl/intl.dart';
 import 'package:module_atendimento/models/mensagem_model.dart';
 import 'package:module_atendimento/providers/mensagens_provider.dart';
 import 'package:module_atendimento/widgets/atendimento_avatar.dart';
+import 'package:module_atendimento/widgets/audio_player_widget.dart';
 
 class ChatPage extends ConsumerStatefulWidget {
   final String tenantId;
@@ -165,7 +166,10 @@ class _ChatPageState extends ConsumerState<ChatPage> {
                       itemBuilder: (context, index) {
                         final mensagem = mensagens[index];
                         return _MessageBubble(
-                            mensagem: mensagem, isDark: isDark);
+                          mensagem: mensagem,
+                          isDark: isDark,
+                          fotoUrl: widget.fotoUrl,
+                        );
                       },
                     );
                   },
@@ -259,8 +263,13 @@ class _ChatPageState extends ConsumerState<ChatPage> {
 class _MessageBubble extends StatelessWidget {
   final MensagemModel mensagem;
   final bool isDark;
+  final String? fotoUrl;
 
-  const _MessageBubble({required this.mensagem, required this.isDark});
+  const _MessageBubble({
+    required this.mensagem,
+    required this.isDark,
+    this.fotoUrl,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -269,6 +278,7 @@ class _MessageBubble extends StatelessWidget {
     final hasAttachment =
         mensagem.anexoUrl != null && mensagem.anexoUrl!.isNotEmpty;
     final isImageMessage = mensagem.mensagemTipo == 'ImageMessage';
+    final isAudioMessage = mensagem.mensagemTipo == 'AudioMessage';
 
     final userBubbleColor =
         isDark ? const Color(0xFF056162) : const Color(0xFFDCF8C6);
@@ -304,74 +314,85 @@ class _MessageBubble extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.end,
           children: [
             if (hasAttachment) ...[
-              Padding(
-                padding: isImageMessage
-                    ? EdgeInsets.zero
-                    : const EdgeInsets.only(bottom: 4.0),
-                child: Stack(
-                  children: [
-                    ClipRRect(
-                      borderRadius: BorderRadius.circular(12),
-                      child: Image.network(
-                        mensagem.anexoUrl!,
-                        fit: BoxFit.cover,
-                        loadingBuilder: (context, child, loadingProgress) {
-                          if (loadingProgress == null) return child;
-                          return SizedBox(
-                            width: 200,
-                            height: 200,
-                            child: Center(
-                              child: CircularProgressIndicator(
-                                value: loadingProgress.expectedTotalBytes !=
-                                        null
-                                    ? loadingProgress.cumulativeBytesLoaded /
-                                        loadingProgress.expectedTotalBytes!
-                                    : null,
+              if (isAudioMessage)
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 4.0),
+                  child: AudioPlayerWidget(
+                    audioUrl: mensagem.anexoUrl!,
+                    isDark: isDark,
+                    time: time,
+                    photoUrl: fotoUrl,
+                  ),
+                )
+              else
+                Padding(
+                  padding: isImageMessage
+                      ? EdgeInsets.zero
+                      : const EdgeInsets.only(bottom: 4.0),
+                  child: Stack(
+                    children: [
+                      ClipRRect(
+                        borderRadius: BorderRadius.circular(12),
+                        child: Image.network(
+                          mensagem.anexoUrl!,
+                          fit: BoxFit.cover,
+                          loadingBuilder: (context, child, loadingProgress) {
+                            if (loadingProgress == null) return child;
+                            return SizedBox(
+                              width: 200,
+                              height: 200,
+                              child: Center(
+                                child: CircularProgressIndicator(
+                                  value: loadingProgress.expectedTotalBytes !=
+                                          null
+                                      ? loadingProgress.cumulativeBytesLoaded /
+                                          loadingProgress.expectedTotalBytes!
+                                      : null,
+                                ),
                               ),
-                            ),
-                          );
-                        },
-                        errorBuilder: (context, error, stackTrace) {
-                          return Container(
-                            width: 200,
-                            height: 200,
-                            color: Colors.grey[300],
-                            child: const Icon(Icons.broken_image, size: 50),
-                          );
-                        },
-                      ),
-                    ),
-                    if (isImageMessage)
-                      Positioned(
-                        bottom: 6,
-                        right: 6,
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(
-                              horizontal: 6, vertical: 2),
-                          decoration: BoxDecoration(
-                            color: Colors.black38,
-                            borderRadius: BorderRadius.circular(10),
-                          ),
-                          child: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Text(
-                                time,
-                                style: const TextStyle(
-                                    color: Colors.white, fontSize: 10),
-                              ),
-                              if (isUsuario) ...[
-                                const SizedBox(width: 4),
-                                _buildStatusIcon(mensagem.status,
-                                    forceWhite: true),
-                              ],
-                            ],
-                          ),
+                            );
+                          },
+                          errorBuilder: (context, error, stackTrace) {
+                            return Container(
+                              width: 200,
+                              height: 200,
+                              color: Colors.grey[300],
+                              child: const Icon(Icons.broken_image, size: 50),
+                            );
+                          },
                         ),
                       ),
-                  ],
+                      if (isImageMessage)
+                        Positioned(
+                          bottom: 6,
+                          right: 6,
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 6, vertical: 2),
+                            decoration: BoxDecoration(
+                              color: Colors.black38,
+                              borderRadius: BorderRadius.circular(10),
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Text(
+                                  time,
+                                  style: const TextStyle(
+                                      color: Colors.white, fontSize: 10),
+                                ),
+                                if (isUsuario) ...[
+                                  const SizedBox(width: 4),
+                                  _buildStatusIcon(mensagem.status,
+                                      forceWhite: true),
+                                ],
+                              ],
+                            ),
+                          ),
+                        ),
+                    ],
+                  ),
                 ),
-              ),
             ],
             if (mensagem.texto.isNotEmpty)
               Padding(
@@ -386,7 +407,7 @@ class _MessageBubble extends StatelessWidget {
                   ),
                 ),
               ),
-            if (!isImageMessage) ...[
+            if (!isImageMessage && !isAudioMessage) ...[
               const SizedBox(height: 4),
               Padding(
                 padding: hasAttachment
