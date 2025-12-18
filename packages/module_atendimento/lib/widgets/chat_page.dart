@@ -1,5 +1,10 @@
+import 'dart:convert';
+import 'dart:io';
+import 'dart:typed_data';
+import 'package:file_picker/file_picker.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_storage/firebase_storage.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
@@ -35,6 +40,7 @@ class ChatPage extends ConsumerStatefulWidget {
 class _ChatPageState extends ConsumerState<ChatPage> {
   final TextEditingController _messageController = TextEditingController();
   final ScrollController _scrollController = ScrollController();
+  PlatformFile? _selectedFile;
 
   @override
   void dispose() {
@@ -185,30 +191,71 @@ class _ChatPageState extends ConsumerState<ChatPage> {
                       const BorderRadius.vertical(bottom: Radius.circular(16)),
                 ),
                 child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.end,
                   children: [
                     IconButton(
                       icon: const Icon(Icons.attach_file, color: Colors.grey),
-                      onPressed: () {},
+                      onPressed: _pickFile,
                     ),
                     Expanded(
-                      child: TextField(
-                        controller: _messageController,
-                        decoration: InputDecoration(
-                          hintText: 'Digite uma mensagem...',
-                          border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(24),
-                            borderSide: BorderSide.none,
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          if (_selectedFile != null) ...[
+                            Container(
+                              margin: const EdgeInsets.only(bottom: 8),
+                              decoration: BoxDecoration(
+                                color: isDark
+                                    ? const Color(0xFF3D3D3D)
+                                    : Colors.white,
+                                borderRadius: BorderRadius.circular(12),
+                                border: Border.all(
+                                  color: isDark
+                                      ? Colors.grey[700]!
+                                      : Colors.grey[300]!,
+                                ),
+                              ),
+                              child: Stack(
+                                children: [
+                                  Padding(
+                                    padding: const EdgeInsets.all(8.0),
+                                    child: _buildFilePreview(_selectedFile!),
+                                  ),
+                                  Positioned(
+                                    right: 0,
+                                    top: 0,
+                                    child: IconButton(
+                                      icon: const Icon(Icons.close, size: 16),
+                                      onPressed: _removeAttachment,
+                                      constraints: const BoxConstraints(),
+                                      padding: const EdgeInsets.all(4),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
+                          TextField(
+                            controller: _messageController,
+                            decoration: InputDecoration(
+                              hintText: 'Digite uma mensagem...',
+                              border: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(24),
+                                borderSide: BorderSide.none,
+                              ),
+                              filled: true,
+                              fillColor: isDark
+                                  ? const Color(0xFF3D3D3D)
+                                  : Colors.white,
+                              contentPadding: const EdgeInsets.symmetric(
+                                  horizontal: 16, vertical: 8),
+                              hintStyle: TextStyle(color: hintColor),
+                            ),
+                            style: TextStyle(color: textColor),
+                            maxLines: null,
+                            textCapitalization: TextCapitalization.sentences,
                           ),
-                          filled: true,
-                          fillColor:
-                              isDark ? const Color(0xFF3D3D3D) : Colors.white,
-                          contentPadding: const EdgeInsets.symmetric(
-                              horizontal: 16, vertical: 8),
-                          hintStyle: TextStyle(color: hintColor),
-                        ),
-                        style: TextStyle(color: textColor),
-                        maxLines: null,
-                        textCapitalization: TextCapitalization.sentences,
+                        ],
                       ),
                     ),
                     const SizedBox(width: 8),
@@ -229,20 +276,180 @@ class _ChatPageState extends ConsumerState<ChatPage> {
     );
   }
 
-  void _sendMessage() {
+  Widget _buildFilePreview(PlatformFile file) {
+    final ext = file.extension?.toLowerCase() ?? '';
+    final isImage = ['jpg', 'jpeg', 'png', 'gif', 'webp'].contains(ext);
+
+    if (isImage) {
+      if (kIsWeb) {
+        if (file.bytes != null) {
+          return ClipRRect(
+            borderRadius: BorderRadius.circular(8),
+            child: Image.memory(
+              file.bytes!,
+              height: 100,
+              width: 100,
+              fit: BoxFit.cover,
+            ),
+          );
+        }
+      } else {
+        if (file.path != null) {
+          return ClipRRect(
+            borderRadius: BorderRadius.circular(8),
+            child: Image.file(
+              File(file.path!),
+              height: 100,
+              width: 100,
+              fit: BoxFit.cover,
+            ),
+          );
+        }
+      }
+    }
+
+    // Preview genérico para outros arquivos
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      decoration: BoxDecoration(
+        border: Border.all(color: Colors.grey),
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(
+            ext == 'pdf' ? Icons.picture_as_pdf : Icons.insert_drive_file,
+            color: ext == 'pdf' ? Colors.red : Colors.blue,
+          ),
+          const SizedBox(width: 8),
+          Flexible(
+            child: Text(
+              file.name,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: const TextStyle(fontSize: 12),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _pickFile() async {
+    try {
+      final result = await FilePicker.platform.pickFiles();
+
+      if (result == null || result.files.isEmpty) return;
+
+      setState(() {
+        _selectedFile = result.files.first;
+      });
+    } catch (e) {
+      print('Erro ao selecionar arquivo: $e');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Erro ao selecionar arquivo: $e')),
+        );
+      }
+    }
+  }
+
+  void _removeAttachment() {
+    setState(() {
+      _selectedFile = null;
+    });
+  }
+
+  Future<void> _sendMessage() async {
     final text = _messageController.text.trim();
-    if (text.isEmpty) return;
+    if (text.isEmpty && _selectedFile == null) return;
 
     final user = FirebaseAuth.instance.currentUser;
+    String? downloadUrl;
+    String? messageType;
+
+    // Se houver arquivo, faz o upload
+    if (_selectedFile != null) {
+      try {
+        final file = _selectedFile!;
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Enviando mensagem...')),
+        );
+
+        final ext = file.extension?.toLowerCase() ?? '';
+        final isImage = ['jpg', 'jpeg', 'png', 'gif', 'webp'].contains(ext);
+
+        // Se for imagem, converte para Base64
+        if (isImage) {
+          Uint8List? fileBytes;
+          if (kIsWeb) {
+            fileBytes = file.bytes;
+          } else if (file.path != null) {
+            fileBytes = await File(file.path!).readAsBytes();
+          }
+
+          if (fileBytes != null) {
+            downloadUrl = base64Encode(fileBytes);
+          } else {
+            throw 'Não foi possível ler o arquivo de imagem';
+          }
+        } else {
+          // Se não for imagem (Audio, Video, etc), usa o Firebase Storage
+          final fileName =
+              '${DateTime.now().millisecondsSinceEpoch}_${file.name}';
+          final storageRef = FirebaseStorage.instance
+              .ref()
+              .child('uploads/${widget.tenantId}/$fileName');
+
+          if (kIsWeb) {
+            if (file.bytes != null) {
+              await storageRef.putData(file.bytes!);
+            } else {
+              throw 'Bytes não disponíveis para upload web';
+            }
+          } else {
+            if (file.path != null) {
+              await storageRef.putFile(File(file.path!));
+            } else if (file.bytes != null) {
+              await storageRef.putData(file.bytes!);
+            } else {
+              throw 'Arquivo inválido';
+            }
+          }
+          downloadUrl = await storageRef.getDownloadURL();
+        }
+
+        // Determinar tipo
+        messageType = 'FileMessage';
+        if (isImage) {
+          messageType = 'ImageMessage';
+        } else if (['mp3', 'wav', 'aac', 'm4a', 'ogg'].contains(ext)) {
+          messageType = 'AudioMessage';
+        } else if (['mp4', 'mov', 'avi'].contains(ext)) {
+          messageType = 'VideoMessage';
+        }
+      } catch (e) {
+        print('Erro no upload: $e');
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Erro ao enviar arquivo: $e')),
+          );
+        }
+        return;
+      }
+    }
 
     final mensagem = MensagemModel(
       id: '',
       tenantId: widget.tenantId,
       atendimentoId: widget.atendimentoId,
       texto: text,
-      isUsuario: true,
       dataEnvio: DateTime.now(),
+      isUsuario: true,
       status: 'pending_send',
+      anexoUrl: downloadUrl,
+      mensagemTipo: messageType,
       telefoneDestino: widget.contactPhone,
       remetenteUid: user?.uid,
       remetenteTipo: 'vendedor',
@@ -257,6 +464,9 @@ class _ChatPageState extends ConsumerState<ChatPage> {
         .addMensagem(mensagem);
 
     _messageController.clear();
+    setState(() {
+      _selectedFile = null;
+    });
   }
 }
 
@@ -277,8 +487,32 @@ class _MessageBubble extends StatelessWidget {
     final time = DateFormat('HH:mm').format(mensagem.dataEnvio);
     final hasAttachment =
         mensagem.anexoUrl != null && mensagem.anexoUrl!.isNotEmpty;
-    final isImageMessage = mensagem.mensagemTipo == 'ImageMessage';
-    final isAudioMessage = mensagem.mensagemTipo == 'AudioMessage';
+
+    // Melhor detecção de imagem: pelo tipo ou pela extensão na URL
+    bool isImageMessage = mensagem.mensagemTipo == 'ImageMessage';
+    if (!isImageMessage && hasAttachment) {
+      final urlLower = mensagem.anexoUrl!.toLowerCase();
+      if (urlLower.contains('.jpg') ||
+          urlLower.contains('.jpeg') ||
+          urlLower.contains('.png') ||
+          urlLower.contains('.gif') ||
+          urlLower.contains('.webp')) {
+        isImageMessage = true;
+      }
+    }
+
+    final isAudioMessage = mensagem.mensagemTipo == 'AudioMessage' ||
+        (hasAttachment &&
+            (mensagem.anexoUrl!.endsWith('.mp3') ||
+                mensagem.anexoUrl!.endsWith('.aac') ||
+                mensagem.anexoUrl!.endsWith('.wav') ||
+                mensagem.anexoUrl!.endsWith('.ogg')));
+
+    // Verifica se a URL já é válida (http/https) ou se ainda é Base64 (pendente)
+    final isImageUrlValid = hasAttachment &&
+        isImageMessage &&
+        (mensagem.anexoUrl!.startsWith('http') ||
+            mensagem.anexoUrl!.startsWith('https'));
 
     final userBubbleColor =
         isDark ? const Color(0xFF056162) : const Color(0xFFDCF8C6);
@@ -333,34 +567,48 @@ class _MessageBubble extends StatelessWidget {
                     children: [
                       ClipRRect(
                         borderRadius: BorderRadius.circular(12),
-                        child: Image.network(
-                          mensagem.anexoUrl!,
-                          fit: BoxFit.cover,
-                          loadingBuilder: (context, child, loadingProgress) {
-                            if (loadingProgress == null) return child;
-                            return SizedBox(
-                              width: 200,
-                              height: 200,
-                              child: Center(
-                                child: CircularProgressIndicator(
-                                  value: loadingProgress.expectedTotalBytes !=
-                                          null
-                                      ? loadingProgress.cumulativeBytesLoaded /
-                                          loadingProgress.expectedTotalBytes!
-                                      : null,
+                        child: isImageUrlValid
+                            ? Image.network(
+                                mensagem.anexoUrl!,
+                                fit: BoxFit.cover,
+                                loadingBuilder:
+                                    (context, child, loadingProgress) {
+                                  if (loadingProgress == null) return child;
+                                  return SizedBox(
+                                    width: 200,
+                                    height: 200,
+                                    child: Center(
+                                      child: CircularProgressIndicator(
+                                        value: loadingProgress
+                                                    .expectedTotalBytes !=
+                                                null
+                                            ? loadingProgress
+                                                    .cumulativeBytesLoaded /
+                                                loadingProgress
+                                                    .expectedTotalBytes!
+                                            : null,
+                                      ),
+                                    ),
+                                  );
+                                },
+                                errorBuilder: (context, error, stackTrace) {
+                                  return Container(
+                                    width: 200,
+                                    height: 200,
+                                    color: Colors.grey[300],
+                                    child: const Icon(Icons.broken_image,
+                                        size: 50),
+                                  );
+                                },
+                              )
+                            : Container(
+                                width: 200,
+                                height: 200,
+                                color: Colors.black12,
+                                child: const Center(
+                                  child: CircularProgressIndicator(),
                                 ),
                               ),
-                            );
-                          },
-                          errorBuilder: (context, error, stackTrace) {
-                            return Container(
-                              width: 200,
-                              height: 200,
-                              color: Colors.grey[300],
-                              child: const Icon(Icons.broken_image, size: 50),
-                            );
-                          },
-                        ),
                       ),
                       if (isImageMessage)
                         Positioned(

@@ -23,6 +23,7 @@ dependencies:
   path_provider: ^2.1.5
   http: ^1.6.0
   just_audio_windows: ^0.2.2
+  file_picker: ^10.3.7
 
 dev_dependencies:
   flutter_test:
