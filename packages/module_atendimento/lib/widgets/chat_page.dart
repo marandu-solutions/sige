@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 import 'dart:typed_data';
@@ -12,6 +13,10 @@ import 'package:module_atendimento/models/mensagem_model.dart';
 import 'package:module_atendimento/providers/mensagens_provider.dart';
 import 'package:module_atendimento/widgets/atendimento_avatar.dart';
 import 'package:module_atendimento/widgets/audio_player_widget.dart';
+import 'package:http/http.dart' as http;
+import 'package:path_provider/path_provider.dart';
+import 'package:permission_handler/permission_handler.dart';
+import 'package:record/record.dart';
 
 class ChatPage extends ConsumerStatefulWidget {
   final String tenantId;
@@ -42,11 +47,143 @@ class _ChatPageState extends ConsumerState<ChatPage> {
   final ScrollController _scrollController = ScrollController();
   PlatformFile? _selectedFile;
 
+  // Gravador de áudio
+  late final AudioRecorder _audioRecorder;
+  bool _isRecording = false;
+  Timer? _timer;
+  int _recordDuration = 0;
+  bool _isComposing = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _audioRecorder = AudioRecorder();
+    _messageController.addListener(_onMessageChanged);
+  }
+
+  void _onMessageChanged() {
+    setState(() {
+      _isComposing = _messageController.text.isNotEmpty;
+    });
+  }
+
   @override
   void dispose() {
+    _messageController.removeListener(_onMessageChanged);
     _messageController.dispose();
     _scrollController.dispose();
+    _timer?.cancel();
+    _audioRecorder.dispose();
     super.dispose();
+  }
+
+  Future<void> _startRecording() async {
+    try {
+      if (await _audioRecorder.hasPermission()) {
+        String? path;
+
+        if (!kIsWeb) {
+          final location = await getApplicationDocumentsDirectory();
+          final name = 'audio_${DateTime.now().millisecondsSinceEpoch}.m4a';
+          path = '${location.path}/$name';
+        } else {
+          // Na web, o path é ignorado pelo record, mas precisamos passar algo
+          path = '';
+        }
+
+        await _audioRecorder.start(const RecordConfig(), path: path);
+
+        setState(() {
+          _isRecording = true;
+          _recordDuration = 0;
+        });
+
+        _timer = Timer.periodic(const Duration(seconds: 1), (timer) {
+          setState(() {
+            _recordDuration++;
+          });
+        });
+      }
+    } catch (e) {
+      print('Erro ao iniciar gravação: $e');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Erro ao iniciar gravação: $e')),
+        );
+      }
+    }
+  }
+
+  Future<void> _stopRecording() async {
+    _timer?.cancel();
+
+    // Na web o path retornado pode ser um blob URL
+    final path = await _audioRecorder.stop();
+
+    setState(() {
+      _isRecording = false;
+    });
+
+    if (path != null) {
+      await _sendAudioFile(path);
+    }
+  }
+
+  Future<void> _cancelRecording() async {
+    _timer?.cancel();
+    await _audioRecorder.stop();
+    setState(() {
+      _isRecording = false;
+      _recordDuration = 0;
+    });
+  }
+
+  Future<void> _sendAudioFile(String path) async {
+    try {
+      String base64Audio;
+
+      if (kIsWeb) {
+        final response = await http.get(Uri.parse(path));
+        final bytes = response.bodyBytes;
+        base64Audio = base64Encode(bytes);
+      } else {
+        final file = File(path);
+        final bytes = await file.readAsBytes();
+        base64Audio = base64Encode(bytes);
+      }
+
+      final user = FirebaseAuth.instance.currentUser;
+
+      final mensagem = MensagemModel(
+        id: '',
+        tenantId: widget.tenantId,
+        atendimentoId: widget.atendimentoId,
+        texto: '',
+        dataEnvio: DateTime.now(),
+        isUsuario: true,
+        status: 'pending_send',
+        anexoUrl: base64Audio, // Envia Base64 diretamente
+        mensagemTipo: 'AudioMessage',
+        telefoneDestino: widget.contactPhone,
+        remetenteUid: user?.uid,
+        remetenteTipo: 'vendedor',
+        leadId: widget.leadId,
+      );
+
+      ref
+          .read(mensagensProvider(MensagensParams(
+                  tenantId: widget.tenantId,
+                  atendimentoId: widget.atendimentoId))
+              .notifier)
+          .addMensagem(mensagem);
+    } catch (e) {
+      print('Erro ao enviar áudio: $e');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Erro ao enviar áudio: $e')),
+        );
+      }
+    }
   }
 
   void _scrollToBottom() {
@@ -190,90 +327,168 @@ class _ChatPageState extends ConsumerState<ChatPage> {
                   borderRadius:
                       const BorderRadius.vertical(bottom: Radius.circular(16)),
                 ),
-                child: Row(
-                  crossAxisAlignment: CrossAxisAlignment.end,
-                  children: [
-                    IconButton(
-                      icon: const Icon(Icons.attach_file, color: Colors.grey),
-                      onPressed: _pickFile,
-                    ),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
+                child: _isRecording
+                    ? _buildRecordingUI(isDark)
+                    : Row(
+                        crossAxisAlignment: CrossAxisAlignment.end,
                         children: [
-                          if (_selectedFile != null) ...[
-                            Container(
-                              margin: const EdgeInsets.only(bottom: 8),
-                              decoration: BoxDecoration(
-                                color: isDark
-                                    ? const Color(0xFF3D3D3D)
-                                    : Colors.white,
-                                borderRadius: BorderRadius.circular(12),
-                                border: Border.all(
-                                  color: isDark
-                                      ? Colors.grey[700]!
-                                      : Colors.grey[300]!,
-                                ),
-                              ),
-                              child: Stack(
-                                children: [
-                                  Padding(
-                                    padding: const EdgeInsets.all(8.0),
-                                    child: _buildFilePreview(_selectedFile!),
-                                  ),
-                                  Positioned(
-                                    right: 0,
-                                    top: 0,
-                                    child: IconButton(
-                                      icon: const Icon(Icons.close, size: 16),
-                                      onPressed: _removeAttachment,
-                                      constraints: const BoxConstraints(),
-                                      padding: const EdgeInsets.all(4),
+                          IconButton(
+                            icon: const Icon(Icons.attach_file,
+                                color: Colors.grey),
+                            onPressed: _pickFile,
+                          ),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                if (_selectedFile != null) ...[
+                                  Container(
+                                    margin: const EdgeInsets.only(bottom: 8),
+                                    decoration: BoxDecoration(
+                                      color: isDark
+                                          ? const Color(0xFF3D3D3D)
+                                          : Colors.white,
+                                      borderRadius: BorderRadius.circular(12),
+                                      border: Border.all(
+                                        color: isDark
+                                            ? Colors.grey[700]!
+                                            : Colors.grey[300]!,
+                                      ),
+                                    ),
+                                    child: Stack(
+                                      children: [
+                                        Padding(
+                                          padding: const EdgeInsets.all(8.0),
+                                          child:
+                                              _buildFilePreview(_selectedFile!),
+                                        ),
+                                        Positioned(
+                                          right: 0,
+                                          top: 0,
+                                          child: IconButton(
+                                            icon: const Icon(Icons.close,
+                                                size: 16),
+                                            onPressed: _removeAttachment,
+                                            constraints: const BoxConstraints(),
+                                            padding: const EdgeInsets.all(4),
+                                          ),
+                                        ),
+                                      ],
                                     ),
                                   ),
                                 ],
-                              ),
+                                TextField(
+                                  controller: _messageController,
+                                  decoration: InputDecoration(
+                                    hintText: 'Digite uma mensagem...',
+                                    border: OutlineInputBorder(
+                                      borderRadius: BorderRadius.circular(24),
+                                      borderSide: BorderSide.none,
+                                    ),
+                                    filled: true,
+                                    fillColor: isDark
+                                        ? const Color(0xFF3D3D3D)
+                                        : Colors.white,
+                                    contentPadding: const EdgeInsets.symmetric(
+                                        horizontal: 16, vertical: 8),
+                                    hintStyle: TextStyle(color: hintColor),
+                                  ),
+                                  style: TextStyle(color: textColor),
+                                  maxLines: null,
+                                  textCapitalization:
+                                      TextCapitalization.sentences,
+                                ),
+                              ],
                             ),
-                          ],
-                          TextField(
-                            controller: _messageController,
-                            decoration: InputDecoration(
-                              hintText: 'Digite uma mensagem...',
-                              border: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(24),
-                                borderSide: BorderSide.none,
-                              ),
-                              filled: true,
-                              fillColor: isDark
-                                  ? const Color(0xFF3D3D3D)
-                                  : Colors.white,
-                              contentPadding: const EdgeInsets.symmetric(
-                                  horizontal: 16, vertical: 8),
-                              hintStyle: TextStyle(color: hintColor),
+                          ),
+                          const SizedBox(width: 8),
+                          CircleAvatar(
+                            backgroundColor: const Color(0xFF075E54),
+                            child: IconButton(
+                              icon: Icon(
+                                  _isComposing || _selectedFile != null
+                                      ? Icons.send
+                                      : Icons.mic,
+                                  color: Colors.white),
+                              onPressed: _isComposing || _selectedFile != null
+                                  ? _sendMessage
+                                  : _startRecording,
                             ),
-                            style: TextStyle(color: textColor),
-                            maxLines: null,
-                            textCapitalization: TextCapitalization.sentences,
                           ),
                         ],
                       ),
-                    ),
-                    const SizedBox(width: 8),
-                    CircleAvatar(
-                      backgroundColor: const Color(0xFF075E54),
-                      child: IconButton(
-                        icon: const Icon(Icons.send, color: Colors.white),
-                        onPressed: _sendMessage,
-                      ),
-                    ),
-                  ],
-                ),
               ),
             ],
           ),
         ),
       ),
     );
+  }
+
+  Widget _buildRecordingUI(bool isDark) {
+    return Row(
+      children: [
+        IconButton(
+          icon: const Icon(Icons.delete, color: Colors.grey),
+          onPressed: _cancelRecording,
+        ),
+        const SizedBox(width: 8),
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+          decoration: BoxDecoration(
+            color: isDark ? const Color(0xFF3D3D3D) : Colors.white,
+            borderRadius: BorderRadius.circular(24),
+          ),
+          child: Row(
+            children: [
+              const Icon(Icons.fiber_manual_record,
+                  color: Colors.red, size: 12),
+              const SizedBox(width: 8),
+              Text(
+                _formatDuration(_recordDuration),
+                style: TextStyle(
+                  color: isDark ? Colors.white : Colors.black87,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              const SizedBox(width: 16),
+              // Waveform simulado
+              SizedBox(
+                height: 20,
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: List.generate(10, (index) {
+                    return Container(
+                      width: 3,
+                      height: 10.0 + (index % 3) * 5,
+                      margin: const EdgeInsets.symmetric(horizontal: 1),
+                      decoration: BoxDecoration(
+                        color: Colors.grey,
+                        borderRadius: BorderRadius.circular(1.5),
+                      ),
+                    );
+                  }),
+                ),
+              ),
+            ],
+          ),
+        ),
+        const Spacer(),
+        CircleAvatar(
+          backgroundColor: const Color(0xFF075E54),
+          child: IconButton(
+            icon: const Icon(Icons.send, color: Colors.white),
+            onPressed: _stopRecording,
+          ),
+        ),
+      ],
+    );
+  }
+
+  String _formatDuration(int seconds) {
+    final minutes = seconds ~/ 60;
+    final remainingSeconds = seconds % 60;
+    return '$minutes:${remainingSeconds.toString().padLeft(2, '0')}';
   }
 
   Widget _buildFilePreview(PlatformFile file) {
