@@ -545,7 +545,7 @@ class _MessageBubble extends StatelessWidget {
           ],
         ),
         child: Column(
-          crossAxisAlignment: CrossAxisAlignment.end,
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             if (hasAttachment) ...[
               if (isAudioMessage)
@@ -661,18 +661,21 @@ class _MessageBubble extends StatelessWidget {
                 padding: hasAttachment
                     ? const EdgeInsets.symmetric(horizontal: 4)
                     : EdgeInsets.zero,
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Text(
-                      time,
-                      style: TextStyle(color: timeColor, fontSize: 10),
-                    ),
-                    if (isUsuario) ...[
-                      const SizedBox(width: 4),
-                      _buildStatusIcon(mensagem.status),
+                child: Align(
+                  alignment: Alignment.centerRight,
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        time,
+                        style: TextStyle(color: timeColor, fontSize: 10),
+                      ),
+                      if (isUsuario) ...[
+                        const SizedBox(width: 4),
+                        _buildStatusIcon(mensagem.status),
+                      ],
                     ],
-                  ],
+                  ),
                 ),
               ),
             ],
