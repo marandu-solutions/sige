@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 import 'dart:typed_data';
+import 'package:cloud_functions/cloud_functions.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_storage/firebase_storage.dart';
@@ -13,6 +14,7 @@ import 'package:module_atendimento/models/mensagem_model.dart';
 import 'package:module_atendimento/providers/mensagens_provider.dart';
 import 'package:module_atendimento/widgets/atendimento_avatar.dart';
 import 'package:module_atendimento/widgets/audio_player_widget.dart';
+import 'package:module_atendimento/widgets/video_player_widget.dart';
 import 'package:http/http.dart' as http;
 import 'package:path_provider/path_provider.dart';
 import 'package:permission_handler/permission_handler.dart';
@@ -524,6 +526,8 @@ class _ChatPageState extends ConsumerState<ChatPage> {
     }
 
     // Preview genérico para outros arquivos
+    final isVideo = ['mp4', 'mov', 'avi', 'mkv', 'webm'].contains(ext);
+
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
       decoration: BoxDecoration(
@@ -534,8 +538,12 @@ class _ChatPageState extends ConsumerState<ChatPage> {
         mainAxisSize: MainAxisSize.min,
         children: [
           Icon(
-            ext == 'pdf' ? Icons.picture_as_pdf : Icons.insert_drive_file,
-            color: ext == 'pdf' ? Colors.red : Colors.blue,
+            ext == 'pdf'
+                ? Icons.picture_as_pdf
+                : (isVideo ? Icons.videocam : Icons.insert_drive_file),
+            color: ext == 'pdf'
+                ? Colors.red
+                : (isVideo ? Colors.black : Colors.blue),
           ),
           const SizedBox(width: 8),
           Flexible(
@@ -594,6 +602,7 @@ class _ChatPageState extends ConsumerState<ChatPage> {
 
         final ext = file.extension?.toLowerCase() ?? '';
         final isImage = ['jpg', 'jpeg', 'png', 'gif', 'webp'].contains(ext);
+        final isVideo = ['mp4', 'mov', 'avi', 'mkv', 'webm'].contains(ext);
 
         // Se for imagem, converte para Base64
         if (isImage) {
@@ -609,8 +618,46 @@ class _ChatPageState extends ConsumerState<ChatPage> {
           } else {
             throw 'Não foi possível ler o arquivo de imagem';
           }
+        } else if (isVideo) {
+          // Se for vídeo, envia via Cloud Function para contornar limite do Firestore (1MB)
+          // e evitar uso do Storage conforme solicitado.
+          Uint8List? fileBytes;
+          if (kIsWeb) {
+            fileBytes = file.bytes;
+          } else if (file.path != null) {
+            fileBytes = await File(file.path!).readAsBytes();
+          }
+
+          if (fileBytes != null) {
+            final base64Video = base64Encode(fileBytes);
+
+            try {
+              // Envia via function
+              await FirebaseFunctions.instance
+                  .httpsCallable('sendVideoMessage')
+                  .call({
+                'tenantId': widget.tenantId,
+                'atendimentoId': widget.atendimentoId,
+                'text': text,
+                'base64Video': base64Video,
+                'customerPhone': widget.contactPhone,
+                'senderUid': user?.uid,
+                'leadId': widget.leadId,
+              });
+
+              _messageController.clear();
+              setState(() {
+                _selectedFile = null;
+              });
+              return; // Envio concluído pela function
+            } catch (e) {
+              throw 'Erro ao enviar vídeo: $e';
+            }
+          } else {
+            throw 'Não foi possível ler o arquivo de vídeo';
+          }
         } else {
-          // Se não for imagem (Audio, Video, etc), usa o Firebase Storage
+          // Se não for imagem/video (Audio, PDF, etc), usa o Firebase Storage
           final fileName =
               '${DateTime.now().millisecondsSinceEpoch}_${file.name}';
           final storageRef = FirebaseStorage.instance
@@ -639,10 +686,10 @@ class _ChatPageState extends ConsumerState<ChatPage> {
         messageType = 'FileMessage';
         if (isImage) {
           messageType = 'ImageMessage';
+        } else if (isVideo) {
+          messageType = 'VideoMessage';
         } else if (['mp3', 'wav', 'aac', 'm4a', 'ogg'].contains(ext)) {
           messageType = 'AudioMessage';
-        } else if (['mp4', 'mov', 'avi'].contains(ext)) {
-          messageType = 'VideoMessage';
         }
       } catch (e) {
         print('Erro no upload: $e');
@@ -723,6 +770,18 @@ class _MessageBubble extends StatelessWidget {
                 mensagem.anexoUrl!.endsWith('.wav') ||
                 mensagem.anexoUrl!.endsWith('.ogg')));
 
+    final isVideoMessage = mensagem.mensagemTipo == 'VideoMessage' ||
+        (hasAttachment &&
+            (mensagem.anexoUrl!.endsWith('.mp4') ||
+                mensagem.anexoUrl!.endsWith('.mov') ||
+                mensagem.anexoUrl!.endsWith('.avi') ||
+                mensagem.anexoUrl!.endsWith('.mkv') ||
+                mensagem.anexoUrl!.endsWith('.webm')));
+
+    // Se for vídeo, mas anexoUrl for null, significa que está processando
+    final isVideoProcessing =
+        mensagem.mensagemTipo == 'VideoMessage' && mensagem.anexoUrl == null;
+
     // Verifica se a URL já é válida (http/https) ou se ainda é Base64 (pendente)
     final isImageUrlValid = hasAttachment &&
         isImageMessage &&
@@ -773,11 +832,103 @@ class _MessageBubble extends StatelessWidget {
                     photoUrl: fotoUrl,
                   ),
                 )
-              else
+              else if (isVideoProcessing)
                 Padding(
-                  padding: isImageMessage
-                      ? EdgeInsets.zero
-                      : const EdgeInsets.only(bottom: 4.0),
+                  padding: const EdgeInsets.only(bottom: 4.0),
+                  child: Container(
+                    width: 200,
+                    height: 200,
+                    decoration: BoxDecoration(
+                      color: Colors.black,
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: const Center(
+                      child: CircularProgressIndicator(color: Colors.white),
+                    ),
+                  ),
+                )
+              else if (isVideoMessage)
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 4.0),
+                  child: GestureDetector(
+                    onTap: () {
+                      if (mensagem.anexoUrl != null) {
+                        showDialog(
+                          context: context,
+                          barrierColor: Colors.black.withOpacity(0.8),
+                          builder: (context) => Dialog(
+                            backgroundColor: Colors.transparent,
+                            insetPadding: EdgeInsets.zero,
+                            child: VideoPlayerWidget(
+                              videoUrl: mensagem.anexoUrl!,
+                              onClose: () => Navigator.of(context).pop(),
+                            ),
+                          ),
+                        );
+                      }
+                    },
+                    child: Container(
+                      width: 200,
+                      height: 200,
+                      decoration: BoxDecoration(
+                        color: Colors.black,
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: ClipRRect(
+                        borderRadius: BorderRadius.circular(12),
+                        child: Stack(
+                          alignment: Alignment.center,
+                          children: [
+                            if (mensagem.anexoUrl != null)
+                              SizedBox.expand(
+                                child: VideoThumbnailWidget(
+                                  videoUrl: mensagem.anexoUrl!,
+                                ),
+                              ),
+                            Container(
+                              color: Colors.black26,
+                            ),
+                            const Icon(Icons.play_circle_outline,
+                                color: Colors.white, size: 50),
+                            Positioned(
+                              bottom: 6,
+                              right: 6,
+                              child: Container(
+                                padding: const EdgeInsets.symmetric(
+                                    horizontal: 6, vertical: 2),
+                                decoration: BoxDecoration(
+                                  color: Colors.black38,
+                                  borderRadius: BorderRadius.circular(10),
+                                ),
+                                child: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    const Icon(Icons.videocam,
+                                        color: Colors.white, size: 10),
+                                    const SizedBox(width: 4),
+                                    Text(
+                                      time,
+                                      style: const TextStyle(
+                                          color: Colors.white, fontSize: 10),
+                                    ),
+                                    if (isUsuario) ...[
+                                      const SizedBox(width: 4),
+                                      _buildStatusIcon(mensagem.status,
+                                          forceWhite: true),
+                                    ],
+                                  ],
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                )
+              else if (isImageMessage)
+                Padding(
+                  padding: EdgeInsets.zero,
                   child: Stack(
                     children: [
                       ClipRRect(
@@ -855,6 +1006,33 @@ class _MessageBubble extends StatelessWidget {
                         ),
                     ],
                   ),
+                )
+              else
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 4.0),
+                  child: Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: Colors.black12,
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const Icon(Icons.insert_drive_file, color: Colors.grey),
+                        const SizedBox(width: 8),
+                        Flexible(
+                          child: Text(
+                            'Arquivo',
+                            style: TextStyle(
+                              color: isDark ? Colors.white : Colors.black,
+                              decoration: TextDecoration.underline,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
                 ),
             ],
             if (mensagem.texto.isNotEmpty)
@@ -870,7 +1048,7 @@ class _MessageBubble extends StatelessWidget {
                   ),
                 ),
               ),
-            if (!isImageMessage && !isAudioMessage) ...[
+            if (!isImageMessage && !isAudioMessage && !isVideoMessage) ...[
               const SizedBox(height: 4),
               Padding(
                 padding: hasAttachment
