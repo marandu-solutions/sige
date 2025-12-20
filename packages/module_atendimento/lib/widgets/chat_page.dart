@@ -55,6 +55,7 @@ class _ChatPageState extends ConsumerState<ChatPage> {
   Timer? _timer;
   int _recordDuration = 0;
   bool _isComposing = false;
+  bool _isSending = false;
 
   @override
   void initState() {
@@ -405,16 +406,20 @@ class _ChatPageState extends ConsumerState<ChatPage> {
                           ),
                           const SizedBox(width: 8),
                           CircleAvatar(
-                            backgroundColor: const Color(0xFF075E54),
+                            backgroundColor: _isSending
+                                ? Colors.grey
+                                : const Color(0xFF075E54),
                             child: IconButton(
                               icon: Icon(
                                   _isComposing || _selectedFile != null
                                       ? Icons.send
                                       : Icons.mic,
                                   color: Colors.white),
-                              onPressed: _isComposing || _selectedFile != null
-                                  ? _sendMessage
-                                  : _startRecording,
+                              onPressed: _isSending
+                                  ? null
+                                  : (_isComposing || _selectedFile != null
+                                      ? _sendMessage
+                                      : _startRecording),
                             ),
                           ),
                         ],
@@ -585,150 +590,163 @@ class _ChatPageState extends ConsumerState<ChatPage> {
   }
 
   Future<void> _sendMessage() async {
+    if (_isSending) return;
+
     final text = _messageController.text.trim();
     if (text.isEmpty && _selectedFile == null) return;
+
+    setState(() {
+      _isSending = true;
+    });
 
     final user = FirebaseAuth.instance.currentUser;
     String? downloadUrl;
     String? messageType;
 
-    // Se houver arquivo, faz o upload
-    if (_selectedFile != null) {
-      try {
-        final file = _selectedFile!;
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Enviando mensagem...')),
-        );
+    try {
+      // Se houver arquivo, faz o upload
+      if (_selectedFile != null) {
+        try {
+          final file = _selectedFile!;
 
-        final ext = file.extension?.toLowerCase() ?? '';
-        final isImage = ['jpg', 'jpeg', 'png', 'gif', 'webp'].contains(ext);
-        final isVideo = ['mp4', 'mov', 'avi', 'mkv', 'webm'].contains(ext);
+          final ext = file.extension?.toLowerCase() ?? '';
+          final isImage = ['jpg', 'jpeg', 'png', 'gif', 'webp'].contains(ext);
+          final isVideo = ['mp4', 'mov', 'avi', 'mkv', 'webm'].contains(ext);
 
-        // Se for imagem, converte para Base64
-        if (isImage) {
-          Uint8List? fileBytes;
-          if (kIsWeb) {
-            fileBytes = file.bytes;
-          } else if (file.path != null) {
-            fileBytes = await File(file.path!).readAsBytes();
-          }
-
-          if (fileBytes != null) {
-            downloadUrl = base64Encode(fileBytes);
-          } else {
-            throw 'Não foi possível ler o arquivo de imagem';
-          }
-        } else if (isVideo) {
-          // Se for vídeo, envia via Cloud Function para contornar limite do Firestore (1MB)
-          // e evitar uso do Storage conforme solicitado.
-          Uint8List? fileBytes;
-          if (kIsWeb) {
-            fileBytes = file.bytes;
-          } else if (file.path != null) {
-            fileBytes = await File(file.path!).readAsBytes();
-          }
-
-          if (fileBytes != null) {
-            final base64Video = base64Encode(fileBytes);
-
-            try {
-              // Envia via function
-              await FirebaseFunctions.instance
-                  .httpsCallable('sendVideoMessage')
-                  .call({
-                'tenantId': widget.tenantId,
-                'atendimentoId': widget.atendimentoId,
-                'text': text,
-                'base64Video': base64Video,
-                'customerPhone': widget.contactPhone,
-                'senderUid': user?.uid,
-                'leadId': widget.leadId,
-              });
-
-              _messageController.clear();
-              setState(() {
-                _selectedFile = null;
-              });
-              return; // Envio concluído pela function
-            } catch (e) {
-              throw 'Erro ao enviar vídeo: $e';
+          // Se for imagem, converte para Base64
+          if (isImage) {
+            Uint8List? fileBytes;
+            if (kIsWeb) {
+              fileBytes = file.bytes;
+            } else if (file.path != null) {
+              fileBytes = await File(file.path!).readAsBytes();
             }
-          } else {
-            throw 'Não foi possível ler o arquivo de vídeo';
-          }
-        } else {
-          // Se não for imagem/video (Audio, PDF, etc), usa o Firebase Storage
-          final fileName =
-              '${DateTime.now().millisecondsSinceEpoch}_${file.name}';
-          final storageRef = FirebaseStorage.instance
-              .ref()
-              .child('uploads/${widget.tenantId}/$fileName');
 
-          if (kIsWeb) {
-            if (file.bytes != null) {
-              await storageRef.putData(file.bytes!);
+            if (fileBytes != null) {
+              downloadUrl = base64Encode(fileBytes);
             } else {
-              throw 'Bytes não disponíveis para upload web';
+              throw 'Não foi possível ler o arquivo de imagem';
+            }
+          } else if (isVideo) {
+            // Se for vídeo, envia via Cloud Function para contornar limite do Firestore (1MB)
+            // e evitar uso do Storage conforme solicitado.
+            Uint8List? fileBytes;
+            if (kIsWeb) {
+              fileBytes = file.bytes;
+            } else if (file.path != null) {
+              fileBytes = await File(file.path!).readAsBytes();
+            }
+
+            if (fileBytes != null) {
+              final base64Video = base64Encode(fileBytes);
+
+              try {
+                // Envia via function
+                await FirebaseFunctions.instance
+                    .httpsCallable('sendVideoMessage')
+                    .call({
+                  'tenantId': widget.tenantId,
+                  'atendimentoId': widget.atendimentoId,
+                  'text': text,
+                  'base64Video': base64Video,
+                  'customerPhone': widget.contactPhone,
+                  'senderUid': user?.uid,
+                  'leadId': widget.leadId,
+                });
+
+                _messageController.clear();
+                setState(() {
+                  _selectedFile = null;
+                });
+                return; // Envio concluído pela function
+              } catch (e) {
+                throw 'Erro ao enviar vídeo: $e';
+              }
+            } else {
+              throw 'Não foi possível ler o arquivo de vídeo';
             }
           } else {
-            if (file.path != null) {
-              await storageRef.putFile(File(file.path!));
-            } else if (file.bytes != null) {
-              await storageRef.putData(file.bytes!);
-            } else {
-              throw 'Arquivo inválido';
-            }
-          }
-          downloadUrl = await storageRef.getDownloadURL();
-        }
+            // Se não for imagem/video (Audio, PDF, etc), usa o Firebase Storage
+            final fileName =
+                '${DateTime.now().millisecondsSinceEpoch}_${file.name}';
+            final storageRef = FirebaseStorage.instance
+                .ref()
+                .child('uploads/${widget.tenantId}/$fileName');
 
-        // Determinar tipo
-        messageType = 'FileMessage';
-        if (isImage) {
-          messageType = 'ImageMessage';
-        } else if (isVideo) {
-          messageType = 'VideoMessage';
-        } else if (['mp3', 'wav', 'aac', 'm4a', 'ogg'].contains(ext)) {
-          messageType = 'AudioMessage';
+            if (kIsWeb) {
+              if (file.bytes != null) {
+                await storageRef.putData(file.bytes!);
+              } else {
+                throw 'Bytes não disponíveis para upload web';
+              }
+            } else {
+              if (file.path != null) {
+                await storageRef.putFile(File(file.path!));
+              } else if (file.bytes != null) {
+                await storageRef.putData(file.bytes!);
+              } else {
+                throw 'Arquivo inválido';
+              }
+            }
+            downloadUrl = await storageRef.getDownloadURL();
+          }
+
+          // Determinar tipo
+          messageType = 'FileMessage';
+          if (isImage) {
+            messageType = 'ImageMessage';
+          } else if (isVideo) {
+            messageType = 'VideoMessage';
+          } else if (['mp3', 'wav', 'aac', 'm4a', 'ogg'].contains(ext)) {
+            messageType = 'AudioMessage';
+          }
+        } catch (e) {
+          print('Erro no upload: $e');
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(content: Text('Erro ao enviar arquivo: $e')),
+            );
+          }
+          return;
         }
-      } catch (e) {
-        print('Erro no upload: $e');
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('Erro ao enviar arquivo: $e')),
-          );
-        }
-        return;
+      } else {
+        messageType = 'TextMessage';
+      }
+
+      final mensagem = MensagemModel(
+        id: '',
+        tenantId: widget.tenantId,
+        atendimentoId: widget.atendimentoId,
+        texto: text,
+        dataEnvio: DateTime.now(),
+        isUsuario: true,
+        status: 'pending_send',
+        anexoUrl: downloadUrl,
+        mensagemTipo: messageType,
+        telefoneDestino: widget.contactPhone,
+        remetenteUid: user?.uid,
+        remetenteTipo: 'vendedor',
+        leadId: widget.leadId,
+      );
+
+      ref
+          .read(mensagensProvider(
+            MensagensParams(
+                tenantId: widget.tenantId, atendimentoId: widget.atendimentoId),
+          ).notifier)
+          .addMensagem(mensagem);
+
+      _messageController.clear();
+      setState(() {
+        _selectedFile = null;
+      });
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isSending = false;
+        });
       }
     }
-
-    final mensagem = MensagemModel(
-      id: '',
-      tenantId: widget.tenantId,
-      atendimentoId: widget.atendimentoId,
-      texto: text,
-      dataEnvio: DateTime.now(),
-      isUsuario: true,
-      status: 'pending_send',
-      anexoUrl: downloadUrl,
-      mensagemTipo: messageType,
-      telefoneDestino: widget.contactPhone,
-      remetenteUid: user?.uid,
-      remetenteTipo: 'vendedor',
-      leadId: widget.leadId,
-    );
-
-    ref
-        .read(mensagensProvider(
-          MensagensParams(
-              tenantId: widget.tenantId, atendimentoId: widget.atendimentoId),
-        ).notifier)
-        .addMensagem(mensagem);
-
-    _messageController.clear();
-    setState(() {
-      _selectedFile = null;
-    });
   }
 }
 
@@ -796,100 +814,191 @@ class _MessageBubble extends StatelessWidget {
     final timeColor = isDark ? Colors.grey[400] : Colors.grey[600];
 
     return Align(
-      alignment: isUsuario ? Alignment.centerRight : Alignment.centerLeft,
-      child: Container(
-        margin: const EdgeInsets.symmetric(vertical: 4, horizontal: 8),
-        padding: hasAttachment
-            ? const EdgeInsets.all(4)
-            : const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-        decoration: BoxDecoration(
-          color: isUsuario ? userBubbleColor : otherBubbleColor,
-          borderRadius: BorderRadius.only(
-            topLeft: const Radius.circular(16),
-            topRight: const Radius.circular(16),
-            bottomLeft: isUsuario ? const Radius.circular(16) : Radius.zero,
-            bottomRight: isUsuario ? Radius.zero : const Radius.circular(16),
-          ),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withOpacity(isDark ? 0.3 : 0.1),
-              blurRadius: 2,
-              offset: const Offset(0, 1),
+        alignment: isUsuario ? Alignment.centerRight : Alignment.centerLeft,
+        child: Container(
+          margin: const EdgeInsets.symmetric(vertical: 4, horizontal: 8),
+          padding: hasAttachment
+              ? const EdgeInsets.all(4)
+              : const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+          decoration: BoxDecoration(
+            color: isUsuario ? userBubbleColor : otherBubbleColor,
+            borderRadius: BorderRadius.only(
+              topLeft: const Radius.circular(16),
+              topRight: const Radius.circular(16),
+              bottomLeft: isUsuario ? const Radius.circular(16) : Radius.zero,
+              bottomRight: isUsuario ? Radius.zero : const Radius.circular(16),
             ),
-          ],
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            if (hasAttachment) ...[
-              if (isAudioMessage)
-                Padding(
-                  padding: const EdgeInsets.only(bottom: 4.0),
-                  child: AudioPlayerWidget(
-                    audioUrl: mensagem.anexoUrl!,
-                    isDark: isDark,
-                    time: time,
-                    photoUrl: fotoUrl,
-                  ),
-                )
-              else if (isVideoProcessing)
-                Padding(
-                  padding: const EdgeInsets.only(bottom: 4.0),
-                  child: Container(
-                    width: 200,
-                    height: 200,
-                    decoration: BoxDecoration(
-                      color: Colors.black,
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: const Center(
-                      child: CircularProgressIndicator(color: Colors.white),
-                    ),
-                  ),
-                )
-              else if (isVideoMessage)
-                Padding(
-                  padding: const EdgeInsets.only(bottom: 4.0),
-                  child: GestureDetector(
-                    onTap: () {
-                      if (mensagem.anexoUrl != null) {
-                        showDialog(
-                          context: context,
-                          barrierColor: Colors.black.withOpacity(0.8),
-                          builder: (context) => Dialog(
-                            backgroundColor: Colors.transparent,
-                            insetPadding: EdgeInsets.zero,
-                            child: VideoPlayerWidget(
-                              videoUrl: mensagem.anexoUrl!,
-                              onClose: () => Navigator.of(context).pop(),
-                            ),
-                          ),
-                        );
-                      }
-                    },
-                    child: Container(
-                      width: 200,
-                      height: 200,
-                      decoration: BoxDecoration(
-                        color: Colors.black,
-                        borderRadius: BorderRadius.circular(12),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(isDark ? 0.3 : 0.1),
+                blurRadius: 2,
+                offset: const Offset(0, 1),
+              ),
+            ],
+          ),
+          constraints: BoxConstraints(
+              maxWidth: MediaQuery.of(context).size.width * 0.75),
+          child: IntrinsicWidth(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                if (hasAttachment) ...[
+                  if (isAudioMessage)
+                    Padding(
+                      padding: const EdgeInsets.only(bottom: 4.0),
+                      child: AudioPlayerWidget(
+                        audioUrl: mensagem.anexoUrl!,
+                        isDark: isDark,
+                        time: time,
+                        photoUrl: fotoUrl,
                       ),
-                      child: ClipRRect(
-                        borderRadius: BorderRadius.circular(12),
-                        child: Stack(
-                          alignment: Alignment.center,
-                          children: [
-                            if (mensagem.anexoUrl != null)
-                              SizedBox.expand(
-                                child: VideoThumbnailWidget(
+                    )
+                  else if (isVideoProcessing)
+                    Padding(
+                      padding: const EdgeInsets.only(bottom: 4.0),
+                      child: Container(
+                        width: 200,
+                        height: 200,
+                        decoration: BoxDecoration(
+                          color: Colors.black,
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: const Center(
+                          child: CircularProgressIndicator(color: Colors.white),
+                        ),
+                      ),
+                    )
+                  else if (isVideoMessage)
+                    Padding(
+                      padding: const EdgeInsets.only(bottom: 4.0),
+                      child: GestureDetector(
+                        onTap: () {
+                          if (mensagem.anexoUrl != null) {
+                            showDialog(
+                              context: context,
+                              barrierColor: Colors.black.withOpacity(0.8),
+                              builder: (context) => Dialog(
+                                backgroundColor: Colors.transparent,
+                                insetPadding: EdgeInsets.zero,
+                                child: VideoPlayerWidget(
                                   videoUrl: mensagem.anexoUrl!,
+                                  onClose: () => Navigator.of(context).pop(),
                                 ),
                               ),
-                            Container(
-                              color: Colors.black26,
+                            );
+                          }
+                        },
+                        child: Container(
+                          width: 200,
+                          height: 200,
+                          decoration: BoxDecoration(
+                            color: Colors.black,
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: ClipRRect(
+                            borderRadius: BorderRadius.circular(12),
+                            child: Stack(
+                              alignment: Alignment.center,
+                              children: [
+                                if (mensagem.anexoUrl != null)
+                                  SizedBox.expand(
+                                    child: VideoThumbnailWidget(
+                                      videoUrl: mensagem.anexoUrl!,
+                                    ),
+                                  ),
+                                Container(
+                                  color: Colors.black26,
+                                ),
+                                const Icon(Icons.play_circle_outline,
+                                    color: Colors.white, size: 50),
+                                Positioned(
+                                  bottom: 6,
+                                  right: 6,
+                                  child: Container(
+                                    padding: const EdgeInsets.symmetric(
+                                        horizontal: 6, vertical: 2),
+                                    decoration: BoxDecoration(
+                                      color: Colors.black38,
+                                      borderRadius: BorderRadius.circular(10),
+                                    ),
+                                    child: Row(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        const Icon(Icons.videocam,
+                                            color: Colors.white, size: 10),
+                                        const SizedBox(width: 4),
+                                        Text(
+                                          time,
+                                          style: const TextStyle(
+                                              color: Colors.white,
+                                              fontSize: 10),
+                                        ),
+                                        if (isUsuario) ...[
+                                          const SizedBox(width: 4),
+                                          _buildStatusIcon(mensagem.status,
+                                              forceWhite: true),
+                                        ],
+                                      ],
+                                    ),
+                                  ),
+                                ),
+                              ],
                             ),
-                            const Icon(Icons.play_circle_outline,
-                                color: Colors.white, size: 50),
+                          ),
+                        ),
+                      ),
+                    )
+                  else if (isImageMessage)
+                    Padding(
+                      padding: EdgeInsets.zero,
+                      child: Stack(
+                        children: [
+                          ClipRRect(
+                            borderRadius: BorderRadius.circular(12),
+                            child: isImageUrlValid
+                                ? Image.network(
+                                    mensagem.anexoUrl!,
+                                    fit: BoxFit.cover,
+                                    loadingBuilder:
+                                        (context, child, loadingProgress) {
+                                      if (loadingProgress == null) return child;
+                                      return SizedBox(
+                                        width: 200,
+                                        height: 200,
+                                        child: Center(
+                                          child: CircularProgressIndicator(
+                                            value: loadingProgress
+                                                        .expectedTotalBytes !=
+                                                    null
+                                                ? loadingProgress
+                                                        .cumulativeBytesLoaded /
+                                                    loadingProgress
+                                                        .expectedTotalBytes!
+                                                : null,
+                                          ),
+                                        ),
+                                      );
+                                    },
+                                    errorBuilder: (context, error, stackTrace) {
+                                      return Container(
+                                        width: 200,
+                                        height: 200,
+                                        color: Colors.grey[300],
+                                        child: const Icon(Icons.broken_image,
+                                            size: 50),
+                                      );
+                                    },
+                                  )
+                                : Container(
+                                    width: 200,
+                                    height: 200,
+                                    color: Colors.black12,
+                                    child: const Center(
+                                      child: CircularProgressIndicator(),
+                                    ),
+                                  ),
+                          ),
+                          if (isImageMessage)
                             Positioned(
                               bottom: 6,
                               right: 6,
@@ -903,9 +1012,6 @@ class _MessageBubble extends StatelessWidget {
                                 child: Row(
                                   mainAxisSize: MainAxisSize.min,
                                   children: [
-                                    const Icon(Icons.videocam,
-                                        color: Colors.white, size: 10),
-                                    const SizedBox(width: 4),
                                     Text(
                                       time,
                                       style: const TextStyle(
@@ -920,162 +1026,77 @@ class _MessageBubble extends StatelessWidget {
                                 ),
                               ),
                             ),
+                        ],
+                      ),
+                    )
+                  else
+                    Padding(
+                      padding: const EdgeInsets.only(bottom: 4.0),
+                      child: Container(
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          color: Colors.black12,
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            const Icon(Icons.insert_drive_file,
+                                color: Colors.grey),
+                            const SizedBox(width: 8),
+                            Flexible(
+                              child: Text(
+                                'Arquivo',
+                                style: TextStyle(
+                                  color: isDark ? Colors.white : Colors.black,
+                                  decoration: TextDecoration.underline,
+                                ),
+                              ),
+                            ),
                           ],
                         ),
                       ),
                     ),
-                  ),
-                )
-              else if (isImageMessage)
-                Padding(
-                  padding: EdgeInsets.zero,
-                  child: Stack(
-                    children: [
-                      ClipRRect(
-                        borderRadius: BorderRadius.circular(12),
-                        child: isImageUrlValid
-                            ? Image.network(
-                                mensagem.anexoUrl!,
-                                fit: BoxFit.cover,
-                                loadingBuilder:
-                                    (context, child, loadingProgress) {
-                                  if (loadingProgress == null) return child;
-                                  return SizedBox(
-                                    width: 200,
-                                    height: 200,
-                                    child: Center(
-                                      child: CircularProgressIndicator(
-                                        value: loadingProgress
-                                                    .expectedTotalBytes !=
-                                                null
-                                            ? loadingProgress
-                                                    .cumulativeBytesLoaded /
-                                                loadingProgress
-                                                    .expectedTotalBytes!
-                                            : null,
-                                      ),
-                                    ),
-                                  );
-                                },
-                                errorBuilder: (context, error, stackTrace) {
-                                  return Container(
-                                    width: 200,
-                                    height: 200,
-                                    color: Colors.grey[300],
-                                    child: const Icon(Icons.broken_image,
-                                        size: 50),
-                                  );
-                                },
-                              )
-                            : Container(
-                                width: 200,
-                                height: 200,
-                                color: Colors.black12,
-                                child: const Center(
-                                  child: CircularProgressIndicator(),
-                                ),
-                              ),
+                ],
+                if (mensagem.texto.isNotEmpty)
+                  Padding(
+                    padding: hasAttachment
+                        ? const EdgeInsets.symmetric(horizontal: 4)
+                        : EdgeInsets.zero,
+                    child: Text(
+                      mensagem.texto,
+                      style: TextStyle(
+                        color: isUsuario ? userTextColor : otherTextColor,
+                        fontSize: 14,
                       ),
-                      if (isImageMessage)
-                        Positioned(
-                          bottom: 6,
-                          right: 6,
-                          child: Container(
-                            padding: const EdgeInsets.symmetric(
-                                horizontal: 6, vertical: 2),
-                            decoration: BoxDecoration(
-                              color: Colors.black38,
-                              borderRadius: BorderRadius.circular(10),
-                            ),
-                            child: Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                Text(
-                                  time,
-                                  style: const TextStyle(
-                                      color: Colors.white, fontSize: 10),
-                                ),
-                                if (isUsuario) ...[
-                                  const SizedBox(width: 4),
-                                  _buildStatusIcon(mensagem.status,
-                                      forceWhite: true),
-                                ],
-                              ],
-                            ),
-                          ),
-                        ),
-                    ],
-                  ),
-                )
-              else
-                Padding(
-                  padding: const EdgeInsets.only(bottom: 4.0),
-                  child: Container(
-                    padding: const EdgeInsets.all(12),
-                    decoration: BoxDecoration(
-                      color: Colors.black12,
-                      borderRadius: BorderRadius.circular(8),
                     ),
+                  ),
+                if (!isImageMessage && !isAudioMessage && !isVideoMessage) ...[
+                  const SizedBox(height: 4),
+                  Padding(
+                    padding: hasAttachment
+                        ? const EdgeInsets.symmetric(horizontal: 4)
+                        : EdgeInsets.zero,
                     child: Row(
-                      mainAxisSize: MainAxisSize.min,
+                      mainAxisSize: MainAxisSize.max,
+                      mainAxisAlignment: MainAxisAlignment.end,
                       children: [
-                        const Icon(Icons.insert_drive_file, color: Colors.grey),
-                        const SizedBox(width: 8),
-                        Flexible(
-                          child: Text(
-                            'Arquivo',
-                            style: TextStyle(
-                              color: isDark ? Colors.white : Colors.black,
-                              decoration: TextDecoration.underline,
-                            ),
-                          ),
+                        Text(
+                          time,
+                          style: TextStyle(color: timeColor, fontSize: 10),
                         ),
+                        if (isUsuario) ...[
+                          const SizedBox(width: 4),
+                          _buildStatusIcon(mensagem.status),
+                        ],
                       ],
                     ),
                   ),
-                ),
-            ],
-            if (mensagem.texto.isNotEmpty)
-              Padding(
-                padding: hasAttachment
-                    ? const EdgeInsets.symmetric(horizontal: 4)
-                    : EdgeInsets.zero,
-                child: Text(
-                  mensagem.texto,
-                  style: TextStyle(
-                    color: isUsuario ? userTextColor : otherTextColor,
-                    fontSize: 14,
-                  ),
-                ),
-              ),
-            if (!isImageMessage && !isAudioMessage && !isVideoMessage) ...[
-              const SizedBox(height: 4),
-              Padding(
-                padding: hasAttachment
-                    ? const EdgeInsets.symmetric(horizontal: 4)
-                    : EdgeInsets.zero,
-                child: Align(
-                  alignment: Alignment.centerRight,
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Text(
-                        time,
-                        style: TextStyle(color: timeColor, fontSize: 10),
-                      ),
-                      if (isUsuario) ...[
-                        const SizedBox(width: 4),
-                        _buildStatusIcon(mensagem.status),
-                      ],
-                    ],
-                  ),
-                ),
-              ),
-            ],
-          ],
-        ),
-      ),
-    );
+                ],
+              ],
+            ),
+          ),
+        ));
   }
 
   Widget _buildStatusIcon(String status, {bool forceWhite = false}) {
