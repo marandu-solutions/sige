@@ -37,6 +37,10 @@ class _HomePageState extends ConsumerState<HomePage> {
     List<String> modulosPermitidos = List<String>.from(
       widget.tenantData?['modulos_ativos'] ?? [],
     );
+    // Force include module_map for testing
+    if (!modulosPermitidos.contains('module_map')) {
+      modulosPermitidos.add('module_map');
+    }
 
     // Filtragem por permissão do funcionário
     final role =
@@ -110,6 +114,11 @@ class _HomePageState extends ConsumerState<HomePage> {
         'rota': AppRoutes.leads,
         'titulo': 'Leads',
         'icone': Icons.contacts,
+      },
+      'module_map': {
+        'rota': AppRoutes.map,
+        'titulo': 'Mapa',
+        'icone': Icons.map,
       },
     };
     return metadataMap[moduloNome] ?? {};

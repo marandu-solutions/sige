@@ -60,6 +60,8 @@ dependencies:
     path: packages/module_gerente_atendimento
   module_leads:
     path: packages/module_leads
+  module_map:
+    path: packages/module_map
 
 dev_dependencies:
   flutter_test:

@@ -10,6 +10,7 @@ import 'package:module_atendimento/module_atendimento.dart';
 import 'package:module_admin_empresa/src/screens/admin_dashboard_screen.dart';
 import 'package:module_gerente_atendimento/module_gerente_atendimento.dart';
 import 'package:module_leads/module_leads.dart';
+import 'package:module_map/module_map.dart';
 
 class AppRoutes {
   static const String root = '/';
@@ -22,6 +23,7 @@ class AppRoutes {
   static const String adminEmpresa = '/admin_empresa';
   static const String gerenteAtendimento = '/gerente_atendimento';
   static const String leads = '/leads';
+  static const String map = '/map';
 
   // Mapa de módulos disponíveis
   // Mapa de módulos disponíveis
@@ -33,6 +35,7 @@ class AppRoutes {
     'module_admin_empresa': AdminDashboardScreen(tenantId: tenantId),
     'module_gerente_atendimento': GerenteAtendimentoScreen(tenantId: tenantId),
     'module_leads': LeadsScreen(tenantId: tenantId),
+    'module_map': const MapScreen(),
   };
 
   static Route<dynamic> generateRoute(RouteSettings settings) {
@@ -95,6 +98,8 @@ class AppRoutes {
           );
         }
         return _errorRoute(settings.name);
+      case map:
+        return MaterialPageRoute(builder: (_) => const MapScreen());
       default:
         return _errorRoute(settings.name);
     }
