@@ -63,6 +63,25 @@ class AtendimentoService {
     var cards = results[0] as List<AtendimentoModel>;
     final columns = results[1] as List<AtendimentoColumnModel>;
 
+    return _processBoardData(tenantId, cards, columns);
+  }
+
+  Future<AtendimentoBoardModel> getAllBoard(String tenantId) async {
+    final columnsFuture = getColumns(tenantId);
+    // Busca TODOS os cards (getAllCards já filtra os arquivados)
+    var cardsFuture = getAllCards(tenantId);
+
+    final results = await Future.wait([cardsFuture, columnsFuture]);
+    var cards = results[0] as List<AtendimentoModel>;
+    final columns = results[1] as List<AtendimentoColumnModel>;
+
+    return _processBoardData(tenantId, cards, columns);
+  }
+
+  Future<AtendimentoBoardModel> _processBoardData(
+      String tenantId,
+      List<AtendimentoModel> cards,
+      List<AtendimentoColumnModel> columns) async {
     // Lógica de Limpeza: Arquivar cards na coluna "Finalizados" > 24h
     // Procura por coluna que contenha "Finalizado" ou "Concluido" no título (case insensitive)
     AtendimentoColumnModel? finalizadosColumn;
@@ -121,6 +140,17 @@ class AtendimentoService {
     final snapshot = await _cardsRef(tenantId)
         .where('funcionario_responsavel_id', isEqualTo: user.uid)
         .get();
+
+    // Filtra localmente cards arquivados
+    return snapshot.docs
+        .map((doc) => doc.data())
+        .where((card) => card.status != 'arquivado')
+        .toList();
+  }
+
+  Future<List<AtendimentoModel>> getAllCards(String tenantId) async {
+    // Busca todos os cards do tenant sem filtro de usuário
+    final snapshot = await _cardsRef(tenantId).get();
 
     // Filtra localmente cards arquivados
     return snapshot.docs

@@ -7,12 +7,14 @@ class FuncionarioAtendimentoColumn extends StatelessWidget {
   final FuncionarioModel funcionario;
   final List<AtendimentoModel> cards;
   final VoidCallback onExpand;
+  final Function(AtendimentoModel) onCardTap;
 
   const FuncionarioAtendimentoColumn({
     super.key,
     required this.funcionario,
     required this.cards,
     required this.onExpand,
+    required this.onCardTap,
   });
 
   @override
@@ -83,9 +85,7 @@ class FuncionarioAtendimentoColumn extends StatelessWidget {
                 return AtendimentoCardWidget(
                   card: card,
                   color: colorScheme.surface, // Passando a cor exigida
-                  onTap: () {
-                    // Optional: Open card details
-                  },
+                  onTap: () => onCardTap(card),
                 );
               },
             ),

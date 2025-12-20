@@ -20,6 +20,7 @@ dependencies:
     path: ../module_atendimento
   module_leads:
     path: ../module_leads
+  timeago: ^3.7.1
 
 dev_dependencies:
   flutter_test:

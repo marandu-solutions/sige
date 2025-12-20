@@ -6,9 +6,11 @@ import 'package:core/core.dart';
 import 'package:module_admin_empresa/module_admin_empresa.dart';
 import 'package:module_admin_empresa/src/providers/admin_providers.dart';
 import 'package:module_atendimento/module_atendimento.dart';
+import 'package:module_gerente_atendimento/src/providers/gerente_atendimento_provider.dart';
 import 'components/funcionario_atendimento_column.dart';
 import 'components/add_lead_gerente_dialog.dart';
 import 'components/readonly_kanban/readonly_atendimento_screen.dart';
+import 'components/readonly_kanban/readonly_chat_page.dart';
 
 class GerenteAtendimentoScreen extends ConsumerStatefulWidget {
   final String tenantId;
@@ -23,6 +25,7 @@ class GerenteAtendimentoScreen extends ConsumerStatefulWidget {
 class _GerenteAtendimentoScreenState
     extends ConsumerState<GerenteAtendimentoScreen> {
   late final ScrollController _scrollController;
+  AtendimentoModel? _selectedCard;
 
   @override
   void initState() {
@@ -39,7 +42,8 @@ class _GerenteAtendimentoScreenState
   @override
   Widget build(BuildContext context) {
     final funcionariosAsync = ref.watch(funcionariosProvider(widget.tenantId));
-    final atendimentoAsync = ref.watch(atendimentoProvider(widget.tenantId));
+    final atendimentoAsync =
+        ref.watch(gerenteAtendimentoProvider(widget.tenantId));
     final colorScheme = Theme.of(context).colorScheme;
 
     return Scaffold(
@@ -49,45 +53,68 @@ class _GerenteAtendimentoScreenState
         backgroundColor: colorScheme.primary,
         foregroundColor: colorScheme.onPrimary,
       ),
-      body: funcionariosAsync.when(
-        loading: () => const Center(child: CircularProgressIndicator()),
-        error: (err, stack) =>
-            Center(child: Text('Erro ao carregar funcionários: $err')),
-        data: (funcionarios) {
-          if (funcionarios.isEmpty) {
-            return const Center(child: Text('Nenhum funcionário encontrado.'));
-          }
-
-          return atendimentoAsync.when(
+      body: Stack(
+        children: [
+          funcionariosAsync.when(
             loading: () => const Center(child: CircularProgressIndicator()),
             error: (err, stack) =>
-                Center(child: Text('Erro ao carregar atendimentos: $err')),
-            data: (board) {
-              return ListView.builder(
-                controller: _scrollController,
-                scrollDirection: Axis.horizontal,
-                padding: const EdgeInsets.all(16),
-                itemCount: funcionarios.length,
-                itemBuilder: (context, index) {
-                  final funcionario = funcionarios[index];
-                  final employeeCards = board.cards
-                      .where(
-                        (card) =>
-                            card.funcionarioResponsavelId == funcionario.id,
-                      )
-                      .toList();
+                Center(child: Text('Erro ao carregar funcionários: $err')),
+            data: (funcionarios) {
+              if (funcionarios.isEmpty) {
+                return const Center(
+                    child: Text('Nenhum funcionário encontrado.'));
+              }
 
-                  return FuncionarioAtendimentoColumn(
-                    funcionario: funcionario,
-                    cards: employeeCards,
-                    onExpand: () =>
-                        _openFuncionarioKanban(context, funcionario),
+              return atendimentoAsync.when(
+                loading: () => const Center(child: CircularProgressIndicator()),
+                error: (err, stack) =>
+                    Center(child: Text('Erro ao carregar atendimentos: $err')),
+                data: (board) {
+                  return ListView.builder(
+                    controller: _scrollController,
+                    scrollDirection: Axis.horizontal,
+                    padding: const EdgeInsets.all(16),
+                    itemCount: funcionarios.length,
+                    itemBuilder: (context, index) {
+                      final funcionario = funcionarios[index];
+                      final employeeCards = board.cards
+                          .where(
+                            (card) =>
+                                card.funcionarioResponsavelId == funcionario.id,
+                          )
+                          .toList();
+
+                      return FuncionarioAtendimentoColumn(
+                        funcionario: funcionario,
+                        cards: employeeCards,
+                        onExpand: () =>
+                            _openFuncionarioKanban(context, funcionario),
+                        onCardTap: (card) {
+                          setState(() {
+                            _selectedCard = card;
+                          });
+                        },
+                      );
+                    },
                   );
                 },
               );
             },
-          );
-        },
+          ),
+          if (_selectedCard != null)
+            ReadOnlyChatPage(
+              tenantId: widget.tenantId,
+              atendimentoId: _selectedCard!.id,
+              contactName: _selectedCard!.clienteNome,
+              contactPhone: _selectedCard!.clienteTelefone,
+              fotoUrl: _selectedCard!.fotoUrl,
+              onClose: () {
+                setState(() {
+                  _selectedCard = null;
+                });
+              },
+            ),
+        ],
       ),
       floatingActionButton: FloatingActionButton(
         onPressed: () => _showAddLeadDialog(context),
@@ -97,7 +124,8 @@ class _GerenteAtendimentoScreenState
   }
 
   void _showAddLeadDialog(BuildContext context) {
-    final atendimentoAsync = ref.read(atendimentoProvider(widget.tenantId));
+    final atendimentoAsync =
+        ref.read(gerenteAtendimentoProvider(widget.tenantId));
     final funcionariosAsync = ref.read(funcionariosProvider(widget.tenantId));
 
     if (atendimentoAsync.valueOrNull?.columns.isEmpty ?? true) {
@@ -146,7 +174,7 @@ class _GerenteAtendimentoScreenState
             leadId: leadId,
           );
           ref
-              .read(atendimentoProvider(widget.tenantId).notifier)
+              .read(gerenteAtendimentoProvider(widget.tenantId).notifier)
               .addCard(newCard);
         },
       ),
