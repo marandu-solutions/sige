@@ -62,6 +62,8 @@ dependencies:
     path: packages/module_leads
   module_map:
     path: packages/module_map
+  shared_preferences: ^2.5.3
+  uuid: ^4.5.2
 
 dev_dependencies:
   flutter_test:
