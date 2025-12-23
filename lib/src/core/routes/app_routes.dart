@@ -28,7 +28,7 @@ class AppRoutes {
   // Mapa de módulos disponíveis
   // Mapa de módulos disponíveis
   static Map<String, Widget> modulosDisponiveis(String tenantId) => {
-    'module_basic_dashboard': const DashboardScreen(),
+    'module_basic_dashboard': const AtendimentoDashboardScreen(),
     'module_estoque': EstoqueScreen(tenantId: tenantId),
     'module_kanban': KanbanScreen(tenantId: tenantId),
     'module_atendimento': AtendimentoScreen(tenantId: tenantId),

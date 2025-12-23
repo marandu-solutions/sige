@@ -1,3 +1,4 @@
+import 'dart:typed_data';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'package:flutter/material.dart';
 
@@ -20,115 +21,118 @@ class AtendimentoAvatar extends StatefulWidget {
 }
 
 class _AtendimentoAvatarState extends State<AtendimentoAvatar> {
-  String? _downloadUrl;
-  bool _loading = false;
-  bool _error = false;
+  Future<Uint8List?>? _imageFuture;
 
   @override
   void initState() {
     super.initState();
-    _loadImage();
+    _updateFuture();
   }
 
   @override
   void didUpdateWidget(covariant AtendimentoAvatar oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (oldWidget.fotoUrl != widget.fotoUrl) {
-      _loadImage();
+    if (widget.fotoUrl != oldWidget.fotoUrl) {
+      _updateFuture();
     }
   }
 
-  Future<void> _loadImage() async {
-    final url = widget.fotoUrl;
-
-    if (url == null || url.isEmpty) {
-      if (mounted) {
-        setState(() {
-          _downloadUrl = null;
-          _error = false;
-          _loading = false;
-        });
-      }
-      return;
+  void _updateFuture() {
+    if (widget.fotoUrl != null &&
+        widget.fotoUrl!.isNotEmpty &&
+        !widget.fotoUrl!.startsWith('http') &&
+        !widget.fotoUrl!.startsWith('https')) {
+      _imageFuture = _fetchImage(widget.fotoUrl!);
+    } else {
+      _imageFuture = null;
     }
+  }
 
-    if (url.startsWith('http')) {
-      if (mounted) {
-        setState(() {
-          _downloadUrl = url;
-          _error = false;
-          _loading = false;
-        });
-      }
-      return;
-    }
-
-    setState(() {
-      _loading = true;
-      _error = false;
-    });
-
+  Future<Uint8List?> _fetchImage(String path) async {
     try {
-      Reference ref;
-      if (url.startsWith('gs://')) {
-        ref = FirebaseStorage.instance.refFromURL(url);
-      } else {
-        ref = FirebaseStorage.instance.ref().child(url);
-      }
-
-      final downloadUrl = await ref.getDownloadURL();
-
-      if (!mounted) return;
-
-      setState(() {
-        _downloadUrl = downloadUrl;
-        _loading = false;
-        _error = false;
-      });
+      // 10MB max size
+      final ref = FirebaseStorage.instance.ref().child(path);
+      return await ref.getData(10 * 1024 * 1024);
     } catch (e) {
-      debugPrint('Erro ao baixar imagem: $e');
-
-      if (!mounted) return;
-      setState(() {
-        _downloadUrl = null;
-        _loading = false;
-        _error = true;
-      });
+      debugPrint('Erro ao carregar imagem: $e');
+      return null;
     }
   }
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final bgColor = widget.backgroundColor ?? theme.colorScheme.surfaceContainerHighest;
+    final bgColor =
+        widget.backgroundColor ?? theme.colorScheme.surfaceContainerHighest;
     final iColor = widget.iconColor ?? theme.colorScheme.onSurfaceVariant;
 
-    if (_loading) {
-      return CircleAvatar(
-        radius: widget.radius,
-        backgroundColor: bgColor,
-        child: Padding(
-          padding: const EdgeInsets.all(8.0),
-          child: CircularProgressIndicator(strokeWidth: 2, color: iColor),
-        ),
-      );
-    }
+    final fallback = Center(
+      child: Icon(Icons.person, color: iColor, size: widget.radius * 1.2),
+    );
 
-    if (_downloadUrl != null) {
-      return CircleAvatar(
-        radius: widget.radius,
-        backgroundColor: bgColor,
-        backgroundImage: NetworkImage(_downloadUrl!),
-        onBackgroundImageError: (exception, stackTrace) {
-          debugPrint('Erro ao renderizar NetworkImage: $exception');
-        },
-      );
+    Widget content = fallback;
+
+    if (widget.fotoUrl != null && widget.fotoUrl!.isNotEmpty) {
+      if (widget.fotoUrl!.startsWith('http') ||
+          widget.fotoUrl!.startsWith('https')) {
+        content = Image.network(
+          widget.fotoUrl!,
+          fit: BoxFit.cover,
+          width: widget.radius * 2,
+          height: widget.radius * 2,
+          errorBuilder: (context, error, stackTrace) {
+            return fallback;
+          },
+          loadingBuilder: (context, child, loadingProgress) {
+            if (loadingProgress == null) return child;
+            return Center(
+              child: CircularProgressIndicator(
+                strokeWidth: 2,
+                color: iColor,
+              ),
+            );
+          },
+        );
+      } else {
+        // Storage path
+        content = FutureBuilder<Uint8List?>(
+          future: _imageFuture,
+          builder: (context, snapshot) {
+            if (snapshot.connectionState == ConnectionState.waiting) {
+              return Center(
+                child: CircularProgressIndicator(
+                  strokeWidth: 2,
+                  color: iColor,
+                ),
+              );
+            }
+            if (snapshot.hasError ||
+                !snapshot.hasData ||
+                snapshot.data == null) {
+              return fallback;
+            }
+            return Image.memory(
+              snapshot.data!,
+              fit: BoxFit.cover,
+              width: widget.radius * 2,
+              height: widget.radius * 2,
+              errorBuilder: (context, error, stackTrace) => fallback,
+            );
+          },
+        );
+      }
     }
 
     return CircleAvatar(
       radius: widget.radius,
       backgroundColor: bgColor,
-      child: Icon(Icons.person, color: iColor, size: widget.radius * 1.2),
+      child: ClipOval(
+        child: SizedBox(
+          width: widget.radius * 2,
+          height: widget.radius * 2,
+          child: content,
+        ),
+      ),
     );
   }
 }

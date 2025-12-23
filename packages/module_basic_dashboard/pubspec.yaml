@@ -11,8 +11,15 @@ dependencies:
     sdk: flutter
   lucide_icons: ^0.257.0
   flutter_riverpod: ^2.5.1
+  fl_chart: ^0.66.0
+  intl: ^0.20.2
+  google_fonts: ^6.1.0
 
 dev_dependencies:
   flutter_test:
     sdk: flutter
   flutter_lints: ^2.0.0
+
+flutter:
+  assets:
+    - assets/icons/
