@@ -15,6 +15,7 @@ class _AtendimentoDashboardScreenState
     extends State<AtendimentoDashboardScreen> {
   // Mock Data
   int _touchedIndex = -1;
+  int _touchedBarGroupIndex = -1;
 
   final List<
       ({
@@ -379,16 +380,16 @@ class _AtendimentoDashboardScreenState
 
   Widget _buildSalesOverTimeChart(ThemeData theme) {
     return Container(
-      height: 400,
+      height: 450,
       padding: const EdgeInsets.all(24),
       decoration: BoxDecoration(
         color: theme.cardColor,
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(24),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withValues(alpha: 0.05),
-            blurRadius: 10,
-            offset: const Offset(0, 4),
+            blurRadius: 20,
+            offset: const Offset(0, 10),
           ),
         ],
       ),
@@ -398,39 +399,132 @@ class _AtendimentoDashboardScreenState
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text(
-                'Volume de Leads vs Vendas',
-                style: GoogleFonts.inter(
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
-                  color: theme.colorScheme.onSurface,
-                ),
-              ),
-              Row(
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  _buildLegendItem(Colors.blueAccent, 'Leads'),
-                  const SizedBox(width: 16),
-                  _buildLegendItem(Colors.greenAccent, 'Vendas'),
+                  Text(
+                    'Volume de Leads vs Vendas',
+                    style: GoogleFonts.inter(
+                      fontSize: 20,
+                      fontWeight: FontWeight.bold,
+                      color: theme.colorScheme.onSurface,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    'Conversão semanal',
+                    style: GoogleFonts.inter(
+                      fontSize: 14,
+                      color: theme.colorScheme.onSurfaceVariant,
+                    ),
+                  ),
                 ],
+              ),
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: theme.scaffoldBackgroundColor,
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Row(
+                  children: [
+                    _buildLegendItem(const Color(0xFF4F46E5), 'Leads'),
+                    const SizedBox(width: 16),
+                    _buildLegendItem(const Color(0xFF059669), 'Vendas'),
+                  ],
+                ),
               ),
             ],
           ),
-          const SizedBox(height: 24),
+          const SizedBox(height: 32),
           Expanded(
             child: BarChart(
               BarChartData(
                 alignment: BarChartAlignment.spaceAround,
                 maxY: 100,
                 barTouchData: BarTouchData(
+                  enabled: true,
                   touchTooltipData: BarTouchTooltipData(
-                    tooltipRoundedRadius: 8,
+                    tooltipPadding: const EdgeInsets.all(16),
+                    tooltipMargin: 8,
+                    getTooltipItem: (group, groupIndex, rod, rodIndex) {
+                      String weekDay;
+                      switch (group.x) {
+                        case 0:
+                          weekDay = 'Segunda';
+                          break;
+                        case 1:
+                          weekDay = 'Terça';
+                          break;
+                        case 2:
+                          weekDay = 'Quarta';
+                          break;
+                        case 3:
+                          weekDay = 'Quinta';
+                          break;
+                        case 4:
+                          weekDay = 'Sexta';
+                          break;
+                        case 5:
+                          weekDay = 'Sábado';
+                          break;
+                        case 6:
+                          weekDay = 'Domingo';
+                          break;
+                        default:
+                          weekDay = '';
+                      }
+                      return BarTooltipItem(
+                        '$weekDay\n',
+                        GoogleFonts.inter(
+                          color: Colors.white,
+                          fontWeight: FontWeight.bold,
+                          fontSize: 16,
+                        ),
+                        children: <TextSpan>[
+                          TextSpan(
+                            text: (rodIndex == 0 ? 'Leads: ' : 'Vendas: '),
+                            style: GoogleFonts.inter(
+                              color: rodIndex == 0
+                                  ? const Color(
+                                      0xFFC7C2FF) // Lighter shade for contrast
+                                  : const Color(
+                                      0xFF86EFAC), // Lighter shade for contrast
+                              fontWeight: FontWeight.w500,
+                              fontSize: 14,
+                            ),
+                          ),
+                          TextSpan(
+                            text: rod.toY.toInt().toString(),
+                            style: GoogleFonts.inter(
+                              color: Colors.white,
+                              fontSize: 14,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ],
+                      );
+                    },
                   ),
+                  touchCallback: (FlTouchEvent event, barTouchResponse) {
+                    setState(() {
+                      if (!event.isInterestedForInteractions ||
+                          barTouchResponse == null ||
+                          barTouchResponse.spot == null) {
+                        _touchedBarGroupIndex = -1;
+                        return;
+                      }
+                      _touchedBarGroupIndex =
+                          barTouchResponse.spot!.touchedBarGroupIndex;
+                    });
+                  },
                 ),
                 titlesData: FlTitlesData(
                   show: true,
                   bottomTitles: AxisTitles(
                     sideTitles: SideTitles(
                       showTitles: true,
+                      reservedSize: 30,
                       getTitlesWidget: (value, meta) {
                         const titles = [
                           'Seg',
@@ -445,14 +539,22 @@ class _AtendimentoDashboardScreenState
                             value.toInt() >= titles.length) {
                           return const SizedBox();
                         }
+                        final isSelected =
+                            value.toInt() == _touchedBarGroupIndex;
                         return Padding(
                           padding: const EdgeInsets.only(top: 8.0),
-                          child: Text(
-                            titles[value.toInt()],
+                          child: AnimatedDefaultTextStyle(
+                            duration: const Duration(milliseconds: 200),
                             style: GoogleFonts.inter(
-                              fontSize: 12,
-                              color: theme.colorScheme.onSurfaceVariant,
+                              fontSize: isSelected ? 14 : 12,
+                              fontWeight: isSelected
+                                  ? FontWeight.bold
+                                  : FontWeight.w500,
+                              color: isSelected
+                                  ? theme.colorScheme.primary
+                                  : theme.colorScheme.onSurfaceVariant,
                             ),
+                            child: Text(titles[value.toInt()]),
                           ),
                         );
                       },
@@ -462,11 +564,14 @@ class _AtendimentoDashboardScreenState
                     sideTitles: SideTitles(
                       showTitles: true,
                       reservedSize: 40,
+                      interval: 20,
                       getTitlesWidget: (value, meta) {
+                        if (value == 0) return const SizedBox();
                         return Text(
                           value.toInt().toString(),
                           style: GoogleFonts.inter(
                             fontSize: 10,
+                            fontWeight: FontWeight.w500,
                             color: theme.colorScheme.onSurfaceVariant,
                           ),
                         );
@@ -483,21 +588,24 @@ class _AtendimentoDashboardScreenState
                   drawVerticalLine: false,
                   horizontalInterval: 20,
                   getDrawingHorizontalLine: (value) => FlLine(
-                    color: theme.dividerColor.withValues(alpha: 0.5),
+                    color: theme.dividerColor.withValues(alpha: 0.2),
                     strokeWidth: 1,
+                    dashArray: [5, 5],
                   ),
                 ),
                 borderData: FlBorderData(show: false),
                 barGroups: [
-                  _makeGroupData(0, 45, 12),
-                  _makeGroupData(1, 60, 18),
-                  _makeGroupData(2, 55, 15),
-                  _makeGroupData(3, 70, 22),
-                  _makeGroupData(4, 85, 28),
-                  _makeGroupData(5, 40, 10),
-                  _makeGroupData(6, 35, 8),
+                  _makeGroupData(0, 45, 12, theme),
+                  _makeGroupData(1, 60, 18, theme),
+                  _makeGroupData(2, 55, 15, theme),
+                  _makeGroupData(3, 70, 22, theme),
+                  _makeGroupData(4, 85, 28, theme),
+                  _makeGroupData(5, 40, 10, theme),
+                  _makeGroupData(6, 35, 8, theme),
                 ],
               ),
+              swapAnimationDuration: const Duration(milliseconds: 350),
+              swapAnimationCurve: Curves.easeOutCubic,
             ),
           ),
         ],
@@ -505,23 +613,46 @@ class _AtendimentoDashboardScreenState
     );
   }
 
-  BarChartGroupData _makeGroupData(int x, double y1, double y2) {
+  BarChartGroupData _makeGroupData(
+      int x, double y1, double y2, ThemeData theme) {
+    final isTouched = _touchedBarGroupIndex == x;
+    final width = isTouched ? 16.0 : 12.0;
+
     return BarChartGroupData(
       x: x,
       barRods: [
         BarChartRodData(
           toY: y1,
-          color: Colors.blueAccent,
-          width: 12,
-          borderRadius: BorderRadius.circular(4),
+          gradient: const LinearGradient(
+            colors: [Color(0xFF4F46E5), Color(0xFF818CF8)],
+            begin: Alignment.bottomCenter,
+            end: Alignment.topCenter,
+          ),
+          width: width,
+          borderRadius: const BorderRadius.vertical(top: Radius.circular(6)),
+          backDrawRodData: BackgroundBarChartRodData(
+            show: true,
+            toY: 100,
+            color: theme.dividerColor.withValues(alpha: 0.05),
+          ),
         ),
         BarChartRodData(
           toY: y2,
-          color: Colors.greenAccent,
-          width: 12,
-          borderRadius: BorderRadius.circular(4),
+          gradient: const LinearGradient(
+            colors: [Color(0xFF059669), Color(0xFF34D399)],
+            begin: Alignment.bottomCenter,
+            end: Alignment.topCenter,
+          ),
+          width: width,
+          borderRadius: const BorderRadius.vertical(top: Radius.circular(6)),
+          backDrawRodData: BackgroundBarChartRodData(
+            show: true,
+            toY: 100,
+            color: theme.dividerColor.withValues(alpha: 0.05),
+          ),
         ),
       ],
+      // showingTooltipIndicators: isTouched ? [0, 1] : [],
     );
   }
 
