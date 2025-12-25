@@ -330,6 +330,7 @@ class AtendimentoService {
         telefoneDestino: customerPhone,
         leadId: leadId,
         mensagemTipo: mensagemTipo,
+        messageId: '',
       );
 
       // Salva na coleção de interações do tenant

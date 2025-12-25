@@ -171,6 +171,7 @@ class _ChatPageState extends ConsumerState<ChatPage> {
         remetenteUid: user?.uid,
         remetenteTipo: 'vendedor',
         leadId: widget.leadId,
+        messageId: '',
       );
 
       ref
@@ -727,6 +728,7 @@ class _ChatPageState extends ConsumerState<ChatPage> {
         remetenteUid: user?.uid,
         remetenteTipo: 'vendedor',
         leadId: widget.leadId,
+        messageId: '',
       );
 
       ref
@@ -814,32 +816,32 @@ class _MessageBubble extends StatelessWidget {
     final timeColor = isDark ? Colors.grey[400] : Colors.grey[600];
 
     return Align(
-        alignment: isUsuario ? Alignment.centerRight : Alignment.centerLeft,
-        child: Container(
-          margin: const EdgeInsets.symmetric(vertical: 4, horizontal: 8),
-          padding: hasAttachment
-              ? const EdgeInsets.all(4)
-              : const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-          decoration: BoxDecoration(
-            color: isUsuario ? userBubbleColor : otherBubbleColor,
-            borderRadius: BorderRadius.only(
-              topLeft: const Radius.circular(16),
-              topRight: const Radius.circular(16),
-              bottomLeft: isUsuario ? const Radius.circular(16) : Radius.zero,
-              bottomRight: isUsuario ? Radius.zero : const Radius.circular(16),
-            ),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withOpacity(isDark ? 0.3 : 0.1),
-                blurRadius: 2,
-                offset: const Offset(0, 1),
-              ),
-            ],
+      alignment: isUsuario ? Alignment.centerRight : Alignment.centerLeft,
+      child: Container(
+        margin: const EdgeInsets.symmetric(vertical: 4, horizontal: 16),
+        padding: hasAttachment
+            ? const EdgeInsets.all(4)
+            : const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+        decoration: BoxDecoration(
+          color: isUsuario ? userBubbleColor : otherBubbleColor,
+          borderRadius: BorderRadius.only(
+            topLeft: const Radius.circular(16),
+            topRight: const Radius.circular(16),
+            bottomLeft: isUsuario ? const Radius.circular(16) : Radius.zero,
+            bottomRight: isUsuario ? Radius.zero : const Radius.circular(16),
           ),
-          constraints: BoxConstraints(
-              maxWidth: MediaQuery.of(context).size.width * 0.75),
-          child: IntrinsicWidth(
-            child: Column(
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(isDark ? 0.3 : 0.1),
+              blurRadius: 2,
+              offset: const Offset(0, 1),
+            ),
+          ],
+        ),
+        constraints: const BoxConstraints(maxWidth: 280),
+        child: Builder(
+          builder: (context) {
+            final content = Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
                 if (hasAttachment) ...[
@@ -1078,7 +1080,7 @@ class _MessageBubble extends StatelessWidget {
                         ? const EdgeInsets.symmetric(horizontal: 4)
                         : EdgeInsets.zero,
                     child: Row(
-                      mainAxisSize: MainAxisSize.max,
+                      mainAxisSize: MainAxisSize.min,
                       mainAxisAlignment: MainAxisAlignment.end,
                       children: [
                         Text(
@@ -1094,9 +1096,12 @@ class _MessageBubble extends StatelessWidget {
                   ),
                 ],
               ],
-            ),
-          ),
-        ));
+            );
+            return !hasAttachment ? IntrinsicWidth(child: content) : content;
+          },
+        ),
+      ),
+    );
   }
 
   Widget _buildStatusIcon(String status, {bool forceWhite = false}) {

@@ -19,6 +19,7 @@ class MensagemModel {
   final String? telefoneDestino;
   final String? leadId;
   final String? mensagemTipo;
+  final String messageId;
 
   MensagemModel({
     required this.id,
@@ -36,6 +37,7 @@ class MensagemModel {
     this.telefoneDestino,
     this.leadId,
     this.mensagemTipo,
+    this.messageId = '',
   });
 
   /// Converte um DocumentSnapshot do Firestore para um objeto MensagemModel.
@@ -63,6 +65,7 @@ class MensagemModel {
       telefoneDestino: map['telefone_destino'],
       leadId: map['lead_id'],
       mensagemTipo: map['mensagemTipo'],
+      messageId: map['messageId'] ?? '',
     );
   }
 
@@ -95,6 +98,7 @@ class MensagemModel {
       'telefone_destino': telefoneDestino,
       'lead_id': leadId,
       'mensagemTipo': mensagemTipo,
+      'messageId': messageId,
     };
   }
 

@@ -23,6 +23,7 @@ class AudioPlayerWidget extends StatefulWidget {
 class _AudioPlayerWidgetState extends State<AudioPlayerWidget> {
   late AudioPlayer _audioPlayer;
   bool _isLoading = true;
+  bool _waitingForUrl = false;
   bool _isPlaying = false;
   Duration _duration = Duration.zero;
   Duration _position = Duration.zero;
@@ -33,7 +34,39 @@ class _AudioPlayerWidgetState extends State<AudioPlayerWidget> {
     super.initState();
     _audioPlayer = AudioPlayer();
     _generateWaveforms();
+    _setupListeners();
     _initAudio();
+  }
+
+  void _setupListeners() {
+    _audioPlayer.playerStateStream.listen((state) {
+      if (mounted) {
+        setState(() {
+          _isPlaying = state.playing;
+          if (state.processingState == ProcessingState.loading ||
+              state.processingState == ProcessingState.buffering) {
+            _isLoading = true;
+          } else {
+            _isLoading = false;
+          }
+
+          if (state.processingState == ProcessingState.completed) {
+            _isPlaying = false;
+            _position = Duration.zero;
+            _audioPlayer.seek(Duration.zero);
+            _audioPlayer.pause();
+          }
+        });
+      }
+    });
+
+    _audioPlayer.positionStream.listen((position) {
+      if (mounted) {
+        setState(() {
+          _position = position;
+        });
+      }
+    });
   }
 
   void _generateWaveforms() {
@@ -44,50 +77,41 @@ class _AudioPlayerWidgetState extends State<AudioPlayerWidget> {
     }
   }
 
+  @override
+  void didUpdateWidget(AudioPlayerWidget oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.audioUrl != widget.audioUrl) {
+      _initAudio();
+    }
+  }
+
   Future<void> _initAudio() async {
+    // Se não for uma URL válida (http/https), mantemos em loading
+    // aguardando o backend atualizar o registro com a URL correta.
+    if (!widget.audioUrl.startsWith('http') &&
+        !widget.audioUrl.startsWith('https')) {
+      if (mounted) {
+        setState(() {
+          _waitingForUrl = true;
+        });
+      }
+      return;
+    }
+
+    if (mounted) {
+      setState(() {
+        _waitingForUrl = false;
+      });
+    }
+
     try {
-      // Carrega o áudio via URL (o just_audio gerencia cache/streaming)
-      // O await aqui espera carregar os metadados e duração
       final duration = await _audioPlayer.setUrl(widget.audioUrl);
 
       if (mounted) {
         setState(() {
           _duration = duration ?? Duration.zero;
-          // Se já temos duração e o player está pronto (ou quase), liberamos a UI
-          // O just_audio entra em 'ready' quando tem dados suficientes para tocar
         });
       }
-
-      // Listeners
-      _audioPlayer.playerStateStream.listen((state) {
-        if (mounted) {
-          setState(() {
-            _isPlaying = state.playing;
-            // Verifica se está carregando/bufferizando
-            if (state.processingState == ProcessingState.loading ||
-                state.processingState == ProcessingState.buffering) {
-              _isLoading = true;
-            } else {
-              _isLoading = false;
-            }
-
-            if (state.processingState == ProcessingState.completed) {
-              _isPlaying = false;
-              _position = Duration.zero;
-              _audioPlayer.seek(Duration.zero);
-              _audioPlayer.pause();
-            }
-          });
-        }
-      });
-
-      _audioPlayer.positionStream.listen((position) {
-        if (mounted) {
-          setState(() {
-            _position = position;
-          });
-        }
-      });
     } catch (e) {
       debugPrint("Erro ao carregar áudio: $e");
       if (mounted) {
@@ -126,9 +150,12 @@ class _AudioPlayerWidgetState extends State<AudioPlayerWidget> {
     final inactiveColor = Colors.grey;
     final timeColor = widget.isDark ? Colors.grey[400] : Colors.grey[600];
 
-    if (_isLoading) {
+    if (_isLoading || _waitingForUrl) {
       return Container(
+        width: 260,
+        height: 50, // Altura aproximada do player carregado
         padding: const EdgeInsets.all(8),
+        alignment: Alignment.center,
         child: const SizedBox(
           width: 24,
           height: 24,
