@@ -1,6 +1,7 @@
 import 'dart:typed_data';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'package:flutter/material.dart';
+import 'package:http/http.dart' as http;
 
 class AtendimentoAvatar extends StatefulWidget {
   final String? fotoUrl;
@@ -38,10 +39,10 @@ class _AtendimentoAvatarState extends State<AtendimentoAvatar> {
   }
 
   void _updateFuture() {
-    if (widget.fotoUrl != null &&
-        widget.fotoUrl!.isNotEmpty &&
-        !widget.fotoUrl!.startsWith('http') &&
-        !widget.fotoUrl!.startsWith('https')) {
+    if (widget.fotoUrl != null && widget.fotoUrl!.isNotEmpty) {
+      // Para o Avatar (Foto de Perfil), SEMPRE baixamos os bytes para a RAM.
+      // Isso resolve o problema de arquivos .enc (WhatsApp) que não têm extensão na URL,
+      // e também funciona para imagens normais (JPG/PNG), evitando salvar no Storage.
       _imageFuture = _fetchImage(widget.fotoUrl!);
     } else {
       _imageFuture = null;
@@ -50,6 +51,14 @@ class _AtendimentoAvatarState extends State<AtendimentoAvatar> {
 
   Future<Uint8List?> _fetchImage(String path) async {
     try {
+      if (path.startsWith('http') || path.startsWith('https')) {
+        final response = await http.get(Uri.parse(path));
+        if (response.statusCode == 200) {
+          return response.bodyBytes;
+        }
+        return null;
+      }
+
       // 10MB max size
       final ref = FirebaseStorage.instance.ref().child(path);
       return await ref.getData(10 * 1024 * 1024);
@@ -73,54 +82,29 @@ class _AtendimentoAvatarState extends State<AtendimentoAvatar> {
     Widget content = fallback;
 
     if (widget.fotoUrl != null && widget.fotoUrl!.isNotEmpty) {
-      if (widget.fotoUrl!.startsWith('http') ||
-          widget.fotoUrl!.startsWith('https')) {
-        content = Image.network(
-          widget.fotoUrl!,
-          fit: BoxFit.cover,
-          width: widget.radius * 2,
-          height: widget.radius * 2,
-          errorBuilder: (context, error, stackTrace) {
-            return fallback;
-          },
-          loadingBuilder: (context, child, loadingProgress) {
-            if (loadingProgress == null) return child;
+      content = FutureBuilder<Uint8List?>(
+        future: _imageFuture,
+        builder: (context, snapshot) {
+          if (snapshot.connectionState == ConnectionState.waiting) {
             return Center(
               child: CircularProgressIndicator(
                 strokeWidth: 2,
                 color: iColor,
               ),
             );
-          },
-        );
-      } else {
-        // Storage path
-        content = FutureBuilder<Uint8List?>(
-          future: _imageFuture,
-          builder: (context, snapshot) {
-            if (snapshot.connectionState == ConnectionState.waiting) {
-              return Center(
-                child: CircularProgressIndicator(
-                  strokeWidth: 2,
-                  color: iColor,
-                ),
-              );
-            }
-            if (snapshot.hasError ||
-                !snapshot.hasData ||
-                snapshot.data == null) {
-              return fallback;
-            }
-            return Image.memory(
-              snapshot.data!,
-              fit: BoxFit.cover,
-              width: widget.radius * 2,
-              height: widget.radius * 2,
-              errorBuilder: (context, error, stackTrace) => fallback,
-            );
-          },
-        );
-      }
+          }
+          if (snapshot.hasError || !snapshot.hasData || snapshot.data == null) {
+            return fallback;
+          }
+          return Image.memory(
+            snapshot.data!,
+            fit: BoxFit.cover,
+            width: widget.radius * 2,
+            height: widget.radius * 2,
+            errorBuilder: (context, error, stackTrace) => fallback,
+          );
+        },
+      );
     }
 
     return CircleAvatar(
