@@ -10,57 +10,53 @@ final authStateProvider = StreamProvider<User?>((ref) {
   return FirebaseAuth.instance.authStateChanges();
 });
 
-final gerenteAtendimentoProvider = AsyncNotifierProvider.family<GerenteAtendimentoNotifier,
-    AtendimentoBoardModel, String>(() {
+final gerenteAtendimentoProvider = StreamNotifierProvider.family<
+    GerenteAtendimentoNotifier, AtendimentoBoardModel, String>(() {
   return GerenteAtendimentoNotifier();
 });
 
 class GerenteAtendimentoNotifier
-    extends FamilyAsyncNotifier<AtendimentoBoardModel, String> {
+    extends FamilyStreamNotifier<AtendimentoBoardModel, String> {
   @override
-  FutureOr<AtendimentoBoardModel> build(String tenantId) async {
+  Stream<AtendimentoBoardModel> build(String tenantId) {
     final userAsync = ref.watch(authStateProvider);
 
     if (userAsync.isLoading || userAsync.valueOrNull == null) {
-      return AtendimentoBoardModel(cards: [], columns: []);
+      return Stream.value(AtendimentoBoardModel(cards: [], columns: []));
     }
 
-    return _getBoard(tenantId);
-  }
-
-  Future<AtendimentoBoardModel> _getBoard(String tenantId) async {
     final atendimentoService = ref.read(atendimentoServiceProvider);
-    // CHANGE: Uses getAllBoard instead of getBoard
-    final board = await atendimentoService.getAllBoard(tenantId);
 
-    // Verificação de Consistência: Cards órfãos (com coluna_status inválido)
-    if (board.columns.isNotEmpty) {
-      final validColumnIds = board.columns.map((c) => c.id).toSet();
-      final fixedCards = <AtendimentoModel>[];
-      bool hasFixes = false;
+    return atendimentoService.getAllBoardStream(tenantId).map((board) {
+      // Verificação de Consistência: Cards órfãos (com coluna_status inválido)
+      if (board.columns.isNotEmpty) {
+        final validColumnIds = board.columns.map((c) => c.id).toSet();
+        final fixedCards = <AtendimentoModel>[];
+        bool hasFixes = false;
 
-      for (final card in board.cards) {
-        if (!validColumnIds.contains(card.colunaStatus)) {
-          // Card órfão detectado. Move para a primeira coluna.
-          final targetColumnId = board.columns.first.id;
+        for (final card in board.cards) {
+          if (!validColumnIds.contains(card.colunaStatus)) {
+            // Card órfão detectado. Move para a primeira coluna.
+            final targetColumnId = board.columns.first.id;
 
-          // Dispara a correção no Firestore (fire and forget)
-          _corrigirStatusCard(card.id, targetColumnId);
+            // Dispara a correção no Firestore (fire and forget)
+            _corrigirStatusCard(card.id, targetColumnId);
 
-          // Corrige localmente para exibição imediata
-          fixedCards.add(card.copyWith(colunaStatus: targetColumnId));
-          hasFixes = true;
-        } else {
-          fixedCards.add(card);
+            // Corrige localmente para exibição imediata
+            fixedCards.add(card.copyWith(colunaStatus: targetColumnId));
+            hasFixes = true;
+          } else {
+            fixedCards.add(card);
+          }
+        }
+
+        if (hasFixes) {
+          return board.copyWith(cards: fixedCards);
         }
       }
 
-      if (hasFixes) {
-        return board.copyWith(cards: fixedCards);
-      }
-    }
-
-    return board;
+      return board;
+    });
   }
 
   Future<void> addCard(AtendimentoModel card) async {
@@ -90,7 +86,7 @@ class GerenteAtendimentoNotifier
       }
     } catch (e) {
       // Se houver erro, recarrega o board completo
-      state = await AsyncValue.guard(() => _getBoard(card.tenantId));
+      ref.invalidateSelf();
     }
   }
 
@@ -116,7 +112,7 @@ class GerenteAtendimentoNotifier
       await atendimentoService.updateCardStatus(tenantId, cardId, newColumn);
     } catch (e) {
       // Se houver erro, recarrega o board completo
-      state = await AsyncValue.guard(() => _getBoard(tenantId));
+      ref.invalidateSelf();
     }
   }
 
@@ -143,7 +139,7 @@ class GerenteAtendimentoNotifier
           tenantId, cardId, newPriority);
     } catch (e) {
       // Se houver erro, recarrega o board completo
-      state = await AsyncValue.guard(() => _getBoard(tenantId));
+      ref.invalidateSelf();
     }
   }
 
@@ -187,7 +183,7 @@ class GerenteAtendimentoNotifier
       }
     } catch (e) {
       // Se houver erro, recarrega o board completo
-      state = await AsyncValue.guard(() => _getBoard(column.tenantId));
+      ref.invalidateSelf();
     }
   }
 
@@ -221,7 +217,7 @@ class GerenteAtendimentoNotifier
       await atendimentoService.updateColumn(column);
     } catch (e) {
       // Se houver erro, recarrega o board completo
-      state = await AsyncValue.guard(() => _getBoard(column.tenantId));
+      ref.invalidateSelf();
     }
   }
 
@@ -263,7 +259,7 @@ class GerenteAtendimentoNotifier
       }
     } catch (e) {
       // Se houver erro, recarrega o board completo
-      state = await AsyncValue.guard(() => _getBoard(tenantId));
+      ref.invalidateSelf();
     }
   }
 
@@ -288,7 +284,7 @@ class GerenteAtendimentoNotifier
       await atendimentoService.updateColumnsOrder(arg, columns);
     } catch (e) {
       // Se houver erro, recarrega o board completo
-      state = await AsyncValue.guard(() => _getBoard(arg));
+      ref.invalidateSelf();
     }
   }
 
@@ -314,7 +310,7 @@ class GerenteAtendimentoNotifier
       await atendimentoService.marcarMensagensComoLidas(tenantId, cardId);
     } catch (e) {
       // Se houver erro, recarrega o board completo
-      state = await AsyncValue.guard(() => _getBoard(tenantId));
+      ref.invalidateSelf();
     }
   }
 }

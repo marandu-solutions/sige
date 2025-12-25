@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -78,10 +79,70 @@ class AtendimentoService {
     return _processBoardData(tenantId, cards, columns);
   }
 
+  Stream<AtendimentoBoardModel> getAllBoardStream(String tenantId) {
+    final columnsStream = getColumnsStream(tenantId);
+    final cardsStream = getAllCardsStream(tenantId);
+
+    return _combineLatest2(columnsStream, cardsStream, (columns, cards) async {
+      return _processBoardData(tenantId, cards, columns);
+    });
+  }
+
+  Stream<R> _combineLatest2<A, B, R>(
+    Stream<A> streamA,
+    Stream<B> streamB,
+    Future<R> Function(A a, B b) combiner,
+  ) {
+    final controller = StreamController<R>();
+    A? latestA;
+    B? latestB;
+    bool hasA = false;
+    bool hasB = false;
+
+    void emit() async {
+      if (hasA && hasB) {
+        try {
+          final result = await combiner(latestA as A, latestB as B);
+          controller.add(result);
+        } catch (e) {
+          controller.addError(e);
+        }
+      }
+    }
+
+    final subA = streamA.listen(
+      (a) {
+        latestA = a;
+        hasA = true;
+        emit();
+      },
+      onError: controller.addError,
+    );
+
+    final subB = streamB.listen(
+      (b) {
+        latestB = b;
+        hasB = true;
+        emit();
+      },
+      onError: controller.addError,
+    );
+
+    controller.onCancel = () {
+      subA.cancel();
+      subB.cancel();
+    };
+
+    return controller.stream;
+  }
+
   Future<AtendimentoBoardModel> _processBoardData(
       String tenantId,
       List<AtendimentoModel> cards,
       List<AtendimentoColumnModel> columns) async {
+    // Garante a ordenação das colunas pelo campo 'order'
+    columns.sort((a, b) => a.order.compareTo(b.order));
+
     // Lógica de Limpeza: Arquivar cards na coluna "Finalizados" > 24h
     // Procura por coluna que contenha "Finalizado" ou "Concluido" no título (case insensitive)
     AtendimentoColumnModel? finalizadosColumn;
@@ -159,6 +220,13 @@ class AtendimentoService {
         .toList();
   }
 
+  Stream<List<AtendimentoModel>> getAllCardsStream(String tenantId) {
+    return _cardsRef(tenantId).snapshots().map((snapshot) => snapshot.docs
+        .map((doc) => doc.data())
+        .where((card) => card.status != 'arquivado')
+        .toList());
+  }
+
   Future<String> addCard(AtendimentoModel card) async {
     final user = FirebaseAuth.instance.currentUser;
 
@@ -213,6 +281,13 @@ class AtendimentoService {
     final snapshot =
         await _columnsRef(tenantId).orderBy('order', descending: false).get();
     return snapshot.docs.map((doc) => doc.data()).toList();
+  }
+
+  Stream<List<AtendimentoColumnModel>> getColumnsStream(String tenantId) {
+    return _columnsRef(tenantId)
+        .orderBy('order', descending: false)
+        .snapshots()
+        .map((snapshot) => snapshot.docs.map((doc) => doc.data()).toList());
   }
 
   Future<String> addColumn(AtendimentoColumnModel column) async {
