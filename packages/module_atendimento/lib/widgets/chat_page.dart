@@ -62,6 +62,24 @@ class _ChatPageState extends ConsumerState<ChatPage> {
     super.initState();
     _audioRecorder = AudioRecorder();
     _messageController.addListener(_onMessageChanged);
+
+    // Marca mensagens como lidas ao abrir o chat
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _marcarComoLidas();
+    });
+  }
+
+  Future<void> _marcarComoLidas() async {
+    try {
+      await ref
+          .read(mensagensProvider(MensagensParams(
+                  tenantId: widget.tenantId,
+                  atendimentoId: widget.atendimentoId))
+              .notifier)
+          .marcarComoLidas(widget.tenantId, widget.atendimentoId);
+    } catch (e) {
+      print('Erro ao marcar mensagens como lidas: $e');
+    }
   }
 
   void _onMessageChanged() {

@@ -84,6 +84,29 @@ class AtendimentoCardWidget extends StatelessWidget {
                       ),
                     ),
                     const Spacer(),
+                    if (card.mensagensNaoLidas > 0) ...[
+                      Container(
+                        width: 24,
+                        height: 24,
+                        decoration: const BoxDecoration(
+                          color: Colors
+                              .green, // Cor verde para destaque (estilo WhatsApp)
+                          shape: BoxShape.circle,
+                        ),
+                        alignment: Alignment.center,
+                        child: Text(
+                          card.mensagensNaoLidas > 99
+                              ? '+99'
+                              : card.mensagensNaoLidas.toString(),
+                          style: textTheme.bodySmall?.copyWith(
+                            color: Colors.white,
+                            fontWeight: FontWeight.bold,
+                            fontSize: 11,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                    ],
                     if (card.fotoUrl != null && card.fotoUrl!.isNotEmpty)
                       AtendimentoAvatar(
                         fotoUrl: card.fotoUrl,
@@ -169,28 +192,6 @@ class AtendimentoCardWidget extends StatelessWidget {
                             overflow: TextOverflow.ellipsis,
                           ),
                         ),
-                        if (card.mensagensNaoLidas > 0) ...[
-                          const SizedBox(width: 8),
-                          Container(
-                            width: 20,
-                            height: 20,
-                            decoration: const BoxDecoration(
-                              color: Colors.blue,
-                              shape: BoxShape.circle,
-                            ),
-                            alignment: Alignment.center,
-                            child: Text(
-                              card.mensagensNaoLidas > 99
-                                  ? '+99'
-                                  : card.mensagensNaoLidas.toString(),
-                              style: textTheme.bodySmall?.copyWith(
-                                color: Colors.white,
-                                fontWeight: FontWeight.bold,
-                                fontSize: 10,
-                              ),
-                            ),
-                          ),
-                        ],
                       ],
                     ),
                   ),
