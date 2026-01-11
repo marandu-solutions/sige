@@ -24,6 +24,7 @@ class _AudioPlayerWidgetState extends State<AudioPlayerWidget> {
   late AudioPlayer _audioPlayer;
   bool _isLoading = true;
   bool _waitingForUrl = false;
+  bool _hasError = false;
   bool _isPlaying = false;
   Duration _duration = Duration.zero;
   Duration _position = Duration.zero;
@@ -86,6 +87,13 @@ class _AudioPlayerWidgetState extends State<AudioPlayerWidget> {
   }
 
   Future<void> _initAudio() async {
+    // Reset error state on new load
+    if (mounted) {
+      setState(() {
+        _hasError = false;
+      });
+    }
+
     // Se não for uma URL válida (http/https), mantemos em loading
     // aguardando o backend atualizar o registro com a URL correta.
     if (!widget.audioUrl.startsWith('http') &&
@@ -117,9 +125,59 @@ class _AudioPlayerWidgetState extends State<AudioPlayerWidget> {
       if (mounted) {
         setState(() {
           _isLoading = false;
+          _hasError = true;
         });
       }
     }
+  }
+
+  void _showErrorDialog() {
+    showDialog(
+      context: context,
+      builder: (context) => Dialog(
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(12),
+        ),
+        child: Container(
+          padding: const EdgeInsets.all(16),
+          width: 300,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Center(
+                child: Text(
+                  "Esta mídia não existe mais",
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w500,
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+              ),
+              const SizedBox(height: 16),
+              Align(
+                alignment: Alignment.bottomRight,
+                child: InkWell(
+                  onTap: () => Navigator.of(context).pop(),
+                  borderRadius: BorderRadius.circular(4),
+                  child: const Padding(
+                    padding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                    child: Text(
+                      "Ok",
+                      style: TextStyle(
+                        color: Colors.blue,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
   }
 
   @override
@@ -129,6 +187,11 @@ class _AudioPlayerWidgetState extends State<AudioPlayerWidget> {
   }
 
   void _togglePlay() {
+    if (_hasError) {
+      _showErrorDialog();
+      return;
+    }
+
     if (_isPlaying) {
       _audioPlayer.pause();
     } else {
