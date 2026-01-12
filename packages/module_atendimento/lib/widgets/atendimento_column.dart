@@ -121,6 +121,17 @@ class _AtendimentoColumnState extends State<AtendimentoColumn>
                             ),
                           ),
                           const SizedBox(width: 12),
+                          if (widget.column.isInitial) ...[
+                            Tooltip(
+                              message: 'Coluna de Entrada de Leads',
+                              child: Icon(
+                                LucideIcons.logIn,
+                                size: 16,
+                                color: widget.column.color,
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                          ],
                           Expanded(
                             child: Text(
                               widget.column.title,

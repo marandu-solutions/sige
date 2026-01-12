@@ -7,6 +7,7 @@ class AtendimentoColumnModel {
   final String title;
   final int colorValue;
   final int order;
+  final bool isInitial;
 
   AtendimentoColumnModel({
     required this.id,
@@ -14,6 +15,7 @@ class AtendimentoColumnModel {
     required this.title,
     required this.colorValue,
     required this.order,
+    this.isInitial = false,
   });
 
   Color get color => Color(colorValue);
@@ -33,6 +35,7 @@ class AtendimentoColumnModel {
       title: map['title'] ?? '',
       colorValue: map['color_value'] ?? 4280391411, // Cor padrão azul
       order: map['order'] ?? 0,
+      isInitial: map['is_initial'] ?? false,
     );
   }
 
@@ -43,6 +46,7 @@ class AtendimentoColumnModel {
       'title': title,
       'color_value': colorValue,
       'order': order,
+      'is_initial': isInitial,
     };
   }
 
@@ -52,6 +56,7 @@ class AtendimentoColumnModel {
     String? title,
     int? colorValue,
     int? order,
+    bool? isInitial,
   }) {
     return AtendimentoColumnModel(
       id: id ?? this.id,
@@ -59,6 +64,7 @@ class AtendimentoColumnModel {
       title: title ?? this.title,
       colorValue: colorValue ?? this.colorValue,
       order: order ?? this.order,
+      isInitial: isInitial ?? this.isInitial,
     );
   }
 }

@@ -4,7 +4,7 @@ import 'package:module_atendimento/models/atendimento_column_model.dart';
 
 class AddEditAtendimentoColumnDialog extends StatefulWidget {
   final AtendimentoColumnModel? column;
-  final Function(String title, Color color) onSave;
+  final Function(String title, Color color, bool isInitial) onSave;
   final VoidCallback? onDelete;
 
   const AddEditAtendimentoColumnDialog({
@@ -23,12 +23,14 @@ class _AddEditAtendimentoColumnDialogState
     extends State<AddEditAtendimentoColumnDialog> {
   late final TextEditingController _titleController;
   late Color _selectedColor;
+  late bool _isInitial;
 
   @override
   void initState() {
     super.initState();
     _titleController = TextEditingController(text: widget.column?.title ?? '');
     _selectedColor = widget.column?.color ?? Colors.blue;
+    _isInitial = widget.column?.isInitial ?? false;
   }
 
   @override
@@ -75,7 +77,7 @@ class _AddEditAtendimentoColumnDialogState
       );
       return;
     }
-    widget.onSave(title, _selectedColor);
+    widget.onSave(title, _selectedColor, _isInitial);
     Navigator.of(context).pop();
   }
 
@@ -112,6 +114,17 @@ class _AddEditAtendimentoColumnDialogState
               title: const Text('Cor da coluna'),
               trailing: const Icon(Icons.color_lens),
               onTap: _showColorPicker,
+            ),
+            const SizedBox(height: 16),
+            SwitchListTile(
+              contentPadding: EdgeInsets.zero,
+              title: const Text('Coluna de Entrada de Leads'),
+              subtitle: const Text(
+                  'Novos leads serão adicionados automaticamente nesta coluna'),
+              value: _isInitial,
+              onChanged: (value) {
+                setState(() => _isInitial = value);
+              },
             ),
           ],
         ),

@@ -194,7 +194,7 @@ class _AtendimentoScreenState extends ConsumerState<AtendimentoScreen> {
       context: context,
       builder: (context) => AddEditAtendimentoColumnDialog(
         column: column,
-        onSave: (title, color) {
+        onSave: (title, color, isInitial) {
           if (column == null) {
             // Adicionar nova coluna
             final newColumn = AtendimentoColumnModel(
@@ -203,6 +203,7 @@ class _AtendimentoScreenState extends ConsumerState<AtendimentoScreen> {
               title: title,
               colorValue: color.toARGB32(),
               order: 0,
+              isInitial: isInitial,
             );
             ref
                 .read(atendimentoProvider(widget.tenantId).notifier)
@@ -212,6 +213,7 @@ class _AtendimentoScreenState extends ConsumerState<AtendimentoScreen> {
             final updatedColumn = column.copyWith(
               title: title,
               colorValue: color.toARGB32(),
+              isInitial: isInitial,
             );
             ref
                 .read(atendimentoProvider(widget.tenantId).notifier)

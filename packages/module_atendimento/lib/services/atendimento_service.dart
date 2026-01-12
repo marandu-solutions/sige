@@ -291,12 +291,39 @@ class AtendimentoService {
   }
 
   Future<String> addColumn(AtendimentoColumnModel column) async {
+    if (column.isInitial) {
+      await _disableOtherInitialColumns(column.tenantId, null);
+    }
     final docRef = await _columnsRef(column.tenantId).add(column);
     return docRef.id;
   }
 
   Future<void> updateColumn(AtendimentoColumnModel column) async {
+    if (column.isInitial) {
+      await _disableOtherInitialColumns(column.tenantId, column.id);
+    }
     await _columnsRef(column.tenantId).doc(column.id).set(column);
+  }
+
+  Future<void> _disableOtherInitialColumns(
+      String tenantId, String? currentColumnId) async {
+    final query = await _columnsRef(tenantId)
+        .where('is_initial', isEqualTo: true)
+        .get();
+
+    final batch = _firestore.batch();
+    bool hasChanges = false;
+
+    for (final doc in query.docs) {
+      if (currentColumnId == null || doc.id != currentColumnId) {
+        batch.update(doc.reference, {'is_initial': false});
+        hasChanges = true;
+      }
+    }
+
+    if (hasChanges) {
+      await batch.commit();
+    }
   }
 
   Future<void> deleteColumn(String tenantId, String columnId) async {
