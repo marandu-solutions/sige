@@ -29,7 +29,7 @@ class AtendimentoNotifier
 
     final atendimentoService = ref.read(atendimentoServiceProvider);
 
-    return atendimentoService.getAllBoardStream(tenantId).map((board) {
+    return atendimentoService.getBoardStream(tenantId).map((board) {
       // Verificação de Consistência: Cards órfãos (com coluna_status inválido)
       if (board.columns.isNotEmpty) {
         final validColumnIds = board.columns.map((c) => c.id).toSet();

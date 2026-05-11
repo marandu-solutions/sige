@@ -79,6 +79,15 @@ class AtendimentoService {
     return _processBoardData(tenantId, cards, columns);
   }
 
+  Stream<AtendimentoBoardModel> getBoardStream(String tenantId) {
+    final columnsStream = getColumnsStream(tenantId);
+    final cardsStream = getCardsStream(tenantId);
+
+    return _combineLatest2(columnsStream, cardsStream, (columns, cards) async {
+      return _processBoardData(tenantId, cards, columns);
+    });
+  }
+
   Stream<AtendimentoBoardModel> getAllBoardStream(String tenantId) {
     final columnsStream = getColumnsStream(tenantId);
     final cardsStream = getAllCardsStream(tenantId);
@@ -209,6 +218,19 @@ class AtendimentoService {
         .toList();
   }
 
+  Stream<List<AtendimentoModel>> getCardsStream(String tenantId) {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) return Stream.value([]);
+
+    return _cardsRef(tenantId)
+        .where('funcionario_responsavel_id', isEqualTo: user.uid)
+        .snapshots()
+        .map((snapshot) => snapshot.docs
+            .map((doc) => doc.data())
+            .where((card) => card.status != 'arquivado')
+            .toList());
+  }
+
   Future<List<AtendimentoModel>> getAllCards(String tenantId) async {
     // Busca todos os cards do tenant sem filtro de usuário
     final snapshot = await _cardsRef(tenantId).get();
@@ -307,9 +329,8 @@ class AtendimentoService {
 
   Future<void> _disableOtherInitialColumns(
       String tenantId, String? currentColumnId) async {
-    final query = await _columnsRef(tenantId)
-        .where('is_initial', isEqualTo: true)
-        .get();
+    final query =
+        await _columnsRef(tenantId).where('is_initial', isEqualTo: true).get();
 
     final batch = _firestore.batch();
     bool hasChanges = false;
