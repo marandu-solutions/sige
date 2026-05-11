@@ -54,10 +54,10 @@ class AtendimentoModel {
       id: id ?? map['id'] ?? '',
       tenantId: map['tenant_id'] ?? '',
       titulo: map['titulo'] ?? '',
-      colunaStatus: map['coluna_status'] ?? 'novo',
+      colunaStatus: map['coluna_status'] ?? map['colunaStatus'] ?? 'novo',
       prioridade: map['prioridade'] ?? 'media',
-      clienteNome: map['cliente_nome'] ?? '',
-      clienteTelefone: map['cliente_telefone'] ?? '',
+      clienteNome: map['cliente_nome'] ?? map['clienteNome'] ?? '',
+      clienteTelefone: map['cliente_telefone'] ?? map['clienteTelefone'] ?? '',
       dataCriacao:
           (map['data_criacao'] as Timestamp?)?.toDate() ?? DateTime.now(),
       dataUltimaAtualizacao:
@@ -67,10 +67,11 @@ class AtendimentoModel {
       status: map['status'] ?? 'ativo',
       ultimaMensagem: map['ultima_mensagem'] ?? '',
       ultimaMensagemData: (map['ultima_mensagem_data'] as Timestamp?)?.toDate(),
-      mensagensNaoLidas: map['mensagens_nao_lidas'] ?? 0,
+      mensagensNaoLidas:
+          int.tryParse(map['mensagens_nao_lidas']?.toString() ?? '0') ?? 0,
       funcionarioResponsavelId: map['funcionario_responsavel_id'],
       leadId: map['lead_id'],
-      fotoUrl: map['foto_url'],
+      fotoUrl: map['foto_url'] ?? map['fotoUrl'],
     );
   }
 

@@ -17,7 +17,8 @@ class LeadsService {
         .doc(tenantId)
         .collection('leads')
         .withConverter<LeadModel>(
-          fromFirestore: (snapshot, _) => LeadModel.fromFirestore(snapshot),
+          fromFirestore: (snapshot, _) =>
+              LeadModel.fromMap(snapshot.data()!, snapshot.id),
           toFirestore: (lead, _) => lead.toMap(),
         );
   }

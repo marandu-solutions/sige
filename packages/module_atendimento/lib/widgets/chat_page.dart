@@ -976,39 +976,7 @@ class _MessageBubble extends StatelessWidget {
                           ClipRRect(
                             borderRadius: BorderRadius.circular(12),
                             child: isImageUrlValid
-                                ? Image.network(
-                                    mensagem.anexoUrl!,
-                                    fit: BoxFit.cover,
-                                    loadingBuilder:
-                                        (context, child, loadingProgress) {
-                                      if (loadingProgress == null) return child;
-                                      return SizedBox(
-                                        width: 200,
-                                        height: 200,
-                                        child: Center(
-                                          child: CircularProgressIndicator(
-                                            value: loadingProgress
-                                                        .expectedTotalBytes !=
-                                                    null
-                                                ? loadingProgress
-                                                        .cumulativeBytesLoaded /
-                                                    loadingProgress
-                                                        .expectedTotalBytes!
-                                                : null,
-                                          ),
-                                        ),
-                                      );
-                                    },
-                                    errorBuilder: (context, error, stackTrace) {
-                                      return Container(
-                                        width: 200,
-                                        height: 200,
-                                        color: Colors.grey[300],
-                                        child: const Icon(Icons.broken_image,
-                                            size: 50),
-                                      );
-                                    },
-                                  )
+                                ? _buildSafeImageNetwork(mensagem.anexoUrl!)
                                 : Container(
                                     width: 200,
                                     height: 200,
@@ -1123,16 +1091,72 @@ class _MessageBubble extends StatelessWidget {
   }
 
   Widget _buildStatusIcon(String status, {bool forceWhite = false}) {
-    final color = forceWhite
-        ? Colors.white
-        : (status == 'error' ? Colors.red : Colors.grey);
-    if (status == 'pending_send') {
-      return Icon(Icons.check, size: 14, color: color);
-    } else if (status == 'sent') {
-      return Icon(Icons.done_all, size: 14, color: color);
-    } else if (status == 'error') {
-      return Icon(Icons.error_outline, size: 14, color: color);
+    IconData iconData;
+    Color color;
+
+    switch (status) {
+      case 'pending_send':
+        iconData = Icons.access_time;
+        color = Colors.grey;
+        break;
+      case 'sent':
+        iconData = Icons.check;
+        color = Colors.grey;
+        break;
+      case 'delivered':
+        iconData = Icons.done_all;
+        color = Colors.grey;
+        break;
+      case 'read':
+        iconData = Icons.done_all;
+        color = Colors.blue;
+        break;
+      case 'error':
+        iconData = Icons.error_outline;
+        color = Colors.red;
+        break;
+      default:
+        iconData = Icons.check;
+        color = Colors.grey;
     }
-    return const SizedBox.shrink();
+
+    if (forceWhite) {
+      color = Colors.white;
+    }
+
+    return Icon(iconData, size: 12, color: color);
+  }
+
+  Widget _buildSafeImageNetwork(String url) {
+    return Image.network(
+      url,
+      fit: BoxFit.cover,
+      loadingBuilder: (context, child, loadingProgress) {
+        if (loadingProgress == null) return child;
+        return SizedBox(
+          width: 200,
+          height: 200,
+          child: Center(
+            child: CircularProgressIndicator(
+              value: loadingProgress.expectedTotalBytes != null
+                  ? loadingProgress.cumulativeBytesLoaded /
+                      loadingProgress.expectedTotalBytes!
+                  : null,
+            ),
+          ),
+        );
+      },
+      errorBuilder: (context, error, stackTrace) {
+        // Intercepta a exception gerada pelo NetworkImage
+        // e retorna um widget de fallback silenciosamente,
+        // evitando o spam no console.
+        return Container(
+          width: 200,
+          height: 200,
+          color: Colors.grey[300],
+          child: const Icon(Icons.broken_image, size: 50, color: Colors.grey),
+        );
+      },
+    );
   }
 }

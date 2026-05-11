@@ -5,6 +5,7 @@ import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:core/core.dart';
 import '../models/map_point_model.dart';
 import '../models/map_polygon_model.dart';
 
@@ -59,9 +60,33 @@ class MapState {
 class MapFeatureController extends StateNotifier<MapState> {
   MapFeatureController() : super(MapState()) {
     _loadCustomPolygons();
+    _listenToGlobalEvents();
   }
 
   static const String _storageKey = 'custom_polygons';
+
+  void _listenToGlobalEvents() {
+    // Escuta eventos de "Novo Lead" disparados por outros módulos (ex: module_atendimento)
+    EventBus().on<NewLeadEvent>().listen((event) {
+      // Se o evento vier com coordenadas, adiciona um ponto no mapa automaticamente
+      if (event.latitude != null && event.longitude != null) {
+        addPoint(MapPointModel(
+          id: event.leadId,
+          title: 'Novo Lead: ${event.leadName}',
+          description: 'Adicionado via Atendimento',
+          latitude: event.latitude!,
+          longitude: event.longitude!,
+          type: 'lead_novo',
+        ));
+
+        // Também podemos disparar um alerta visual na tela
+        fireEvent(AlertEvent(
+          message: 'Novo ponto adicionado ao mapa: ${event.leadName}',
+          type: AlertType.info,
+        ));
+      }
+    });
+  }
 
   Future<void> _loadCustomPolygons() async {
     try {

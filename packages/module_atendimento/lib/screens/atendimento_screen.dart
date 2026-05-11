@@ -11,6 +11,8 @@ import 'package:module_atendimento/widgets/chat_page.dart';
 import 'package:lucide_icons/lucide_icons.dart';
 import 'dart:math';
 
+import 'package:core/core.dart';
+
 class AtendimentoScreen extends ConsumerStatefulWidget {
   final String tenantId;
   final String? funcionarioIdFilter;
@@ -266,6 +268,21 @@ class _AtendimentoScreenState extends ConsumerState<AtendimentoScreen> {
           ref
               .read(atendimentoProvider(widget.tenantId).notifier)
               .addCard(newCard);
+
+          // Dispara o evento global de novo lead (Fire and Forget)
+          fireEvent(NewLeadEvent(
+            tenantId: widget.tenantId,
+            leadId: leadId ?? newCard.id,
+            leadName: clienteNome,
+            // latitude: ..., // se tivesse dados de localização na hora de criar
+            // longitude: ...,
+          ));
+
+          // Opcional: dispara um alerta na UI
+          fireEvent(AlertEvent(
+            message: 'Novo atendimento criado para $clienteNome',
+            type: AlertType.success,
+          ));
         },
       ),
     );
