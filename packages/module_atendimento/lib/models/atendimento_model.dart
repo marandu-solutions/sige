@@ -22,6 +22,10 @@ class AtendimentoModel {
   final String? leadId;
   final String? fotoUrl;
 
+  final String? protocolo;
+  final DateTime? expAtendimento;
+  final bool isAtivo;
+
   AtendimentoModel({
     required this.id,
     required this.tenantId,
@@ -40,6 +44,9 @@ class AtendimentoModel {
     this.funcionarioResponsavelId,
     this.leadId,
     this.fotoUrl,
+    this.protocolo,
+    this.expAtendimento,
+    this.isAtivo = true,
   });
 
   /// Converte um DocumentSnapshot do Firestore para um objeto AtendimentoModel.
@@ -72,6 +79,9 @@ class AtendimentoModel {
       funcionarioResponsavelId: map['funcionario_responsavel_id'],
       leadId: map['lead_id'],
       fotoUrl: map['foto_url'] ?? map['fotoUrl'],
+      protocolo: map['protocolo'],
+      expAtendimento: (map['exp_atendimento'] as Timestamp?)?.toDate(),
+      isAtivo: map['is_ativo'] ?? true,
     );
   }
 
@@ -98,6 +108,10 @@ class AtendimentoModel {
       'funcionario_responsavel_id': funcionarioResponsavelId,
       'lead_id': leadId,
       'foto_url': fotoUrl,
+      'protocolo': protocolo,
+      'exp_atendimento':
+          expAtendimento != null ? Timestamp.fromDate(expAtendimento!) : null,
+      'is_ativo': isAtivo,
     };
   }
 
@@ -120,6 +134,9 @@ class AtendimentoModel {
     String? funcionarioResponsavelId,
     String? leadId,
     String? fotoUrl,
+    String? protocolo,
+    DateTime? expAtendimento,
+    bool? isAtivo,
   }) {
     return AtendimentoModel(
       id: id ?? this.id,
@@ -141,6 +158,9 @@ class AtendimentoModel {
           funcionarioResponsavelId ?? this.funcionarioResponsavelId,
       leadId: leadId ?? this.leadId,
       fotoUrl: fotoUrl ?? this.fotoUrl,
+      protocolo: protocolo ?? this.protocolo,
+      expAtendimento: expAtendimento ?? this.expAtendimento,
+      isAtivo: isAtivo ?? this.isAtivo,
     );
   }
 }

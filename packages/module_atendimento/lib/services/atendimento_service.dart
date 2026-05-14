@@ -152,6 +152,10 @@ class AtendimentoService {
     // Garante a ordenação das colunas pelo campo 'order'
     columns.sort((a, b) => a.order.compareTo(b.order));
 
+    final now = DateTime.now();
+    final cardsToArchive = <AtendimentoModel>[];
+    final cardsToExpire = <AtendimentoModel>[];
+
     // Lógica de Limpeza: Arquivar cards na coluna "Finalizados" > 24h
     // Procura por coluna que contenha "Finalizado" ou "Concluido" no título (case insensitive)
     AtendimentoColumnModel? finalizadosColumn;
@@ -166,39 +170,63 @@ class AtendimentoService {
       // Nenhuma coluna de finalizados encontrada
     }
 
-    if (finalizadosColumn != null) {
-      final now = DateTime.now();
-      final cardsToArchive = <AtendimentoModel>[];
-      final finalizadosId = finalizadosColumn.id;
-
-      for (final card in cards) {
-        if (card.colunaStatus == finalizadosId &&
-            card.dataEntradaColuna != null) {
-          final diff = now.difference(card.dataEntradaColuna!);
-          if (diff.inHours >= 24) {
-            cardsToArchive.add(card);
-          }
+    for (final card in cards) {
+      // 1. Verifica expiração do tempo limite de atendimento
+      if (card.isAtivo && card.expAtendimento != null) {
+        if (now.isAfter(card.expAtendimento!) ||
+            now.isAtSameMomentAs(card.expAtendimento!)) {
+          cardsToExpire.add(card);
+          continue; // Pula para o próximo card, já que este vai ser inativado
         }
       }
 
-      if (cardsToArchive.isNotEmpty) {
-        // Arquiva no Firestore
-        for (final card in cardsToArchive) {
-          await _archiveCard(tenantId, card.id);
+      // 2. Verifica se deve ser arquivado da coluna finalizados
+      if (finalizadosColumn != null &&
+          card.colunaStatus == finalizadosColumn.id &&
+          card.dataEntradaColuna != null) {
+        final diff = now.difference(card.dataEntradaColuna!);
+        if (diff.inHours >= 24) {
+          cardsToArchive.add(card);
         }
-
-        // Remove da lista local para atualizar a UI imediatamente
-        cards = cards
-            .where(
-                (c) => !cardsToArchive.any((archived) => archived.id == c.id))
-            .toList();
       }
+    }
+
+    if (cardsToExpire.isNotEmpty) {
+      // Encerra no Firestore (marca is_ativo = false)
+      for (final card in cardsToExpire) {
+        await _encerrarAtendimento(tenantId, card.id);
+      }
+
+      // Remove da lista local para atualizar a UI imediatamente
+      cards = cards
+          .where((c) => !cardsToExpire.any((expired) => expired.id == c.id))
+          .toList();
+    }
+
+    if (cardsToArchive.isNotEmpty) {
+      // Arquiva no Firestore
+      for (final card in cardsToArchive) {
+        await _archiveCard(tenantId, card.id);
+      }
+
+      // Remove da lista local para atualizar a UI imediatamente
+      cards = cards
+          .where((c) => !cardsToArchive.any((archived) => archived.id == c.id))
+          .toList();
     }
 
     return AtendimentoBoardModel(
       cards: cards,
       columns: columns,
     );
+  }
+
+  // Método interno para encerrar atendimento expirado
+  Future<void> _encerrarAtendimento(String tenantId, String cardId) async {
+    await _cardsRef(tenantId).doc(cardId).update({
+      'is_ativo': false,
+      'data_ultima_atualizacao': FieldValue.serverTimestamp(),
+    });
   }
 
   // Operações de Cards
@@ -211,10 +239,10 @@ class AtendimentoService {
         .where('funcionario_responsavel_id', isEqualTo: user.uid)
         .get();
 
-    // Filtra localmente cards arquivados
+    // Filtra localmente cards arquivados e inativos
     return snapshot.docs
         .map((doc) => doc.data())
-        .where((card) => card.status != 'arquivado')
+        .where((card) => card.status != 'arquivado' && card.isAtivo)
         .toList();
   }
 
@@ -227,7 +255,7 @@ class AtendimentoService {
         .snapshots()
         .map((snapshot) => snapshot.docs
             .map((doc) => doc.data())
-            .where((card) => card.status != 'arquivado')
+            .where((card) => card.status != 'arquivado' && card.isAtivo)
             .toList());
   }
 
@@ -235,18 +263,29 @@ class AtendimentoService {
     // Busca todos os cards do tenant sem filtro de usuário
     final snapshot = await _cardsRef(tenantId).get();
 
-    // Filtra localmente cards arquivados
+    // Filtra localmente cards arquivados e inativos
     return snapshot.docs
         .map((doc) => doc.data())
-        .where((card) => card.status != 'arquivado')
+        .where((card) => card.status != 'arquivado' && card.isAtivo)
         .toList();
   }
 
   Stream<List<AtendimentoModel>> getAllCardsStream(String tenantId) {
     return _cardsRef(tenantId).snapshots().map((snapshot) => snapshot.docs
         .map((doc) => doc.data())
-        .where((card) => card.status != 'arquivado')
+        .where((card) => card.status != 'arquivado' && card.isAtivo)
         .toList());
+  }
+
+  Future<List<AtendimentoModel>> getHistoryCards(String tenantId) async {
+    // Busca todos os cards do tenant
+    final snapshot = await _cardsRef(tenantId).get();
+
+    // Filtra localmente os cards que foram encerrados (inativos ou arquivados)
+    return snapshot.docs
+        .map((doc) => doc.data())
+        .where((card) => card.status == 'arquivado' || !card.isAtivo)
+        .toList();
   }
 
   Future<String> addCard(AtendimentoModel card) async {

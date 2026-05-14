@@ -11,6 +11,7 @@ import 'components/funcionario_atendimento_column.dart';
 import 'components/add_lead_gerente_dialog.dart';
 import 'components/readonly_kanban/readonly_atendimento_screen.dart';
 import 'components/readonly_kanban/readonly_chat_page.dart';
+import 'history_atendimento_screen/history_atendimento_screen.dart';
 
 class GerenteAtendimentoScreen extends ConsumerStatefulWidget {
   final String tenantId;
@@ -52,6 +53,21 @@ class _GerenteAtendimentoScreenState
         title: const Text('Visão do Gerente'),
         backgroundColor: colorScheme.primary,
         foregroundColor: colorScheme.onPrimary,
+        actions: [
+          IconButton(
+            icon: const Icon(LucideIcons.history),
+            tooltip: 'Histórico de Atendimentos',
+            onPressed: () {
+              Navigator.of(context).push(
+                MaterialPageRoute(
+                  builder: (context) => HistoryAtendimentoScreen(
+                    tenantId: widget.tenantId,
+                  ),
+                ),
+              );
+            },
+          ),
+        ],
       ),
       body: Stack(
         children: [
