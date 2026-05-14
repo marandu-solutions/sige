@@ -149,6 +149,10 @@ class AtendimentoService {
       String tenantId,
       List<AtendimentoModel> cards,
       List<AtendimentoColumnModel> columns) async {
+    // Fetch tenant to get tempoAtendimento
+    final tenantDoc = await _firestore.collection('tenant').doc(tenantId).get();
+    final int tempoAtendimento = tenantDoc.data()?['tempo_atendimento'] ?? 0;
+
     // Garante a ordenação das colunas pelo campo 'order'
     columns.sort((a, b) => a.order.compareTo(b.order));
 
@@ -171,10 +175,11 @@ class AtendimentoService {
     }
 
     for (final card in cards) {
-      // 1. Verifica expiração do tempo limite de atendimento
-      if (card.isAtivo && card.expAtendimento != null) {
-        if (now.isAfter(card.expAtendimento!) ||
-            now.isAtSameMomentAs(card.expAtendimento!)) {
+      // 1. Verifica expiração do tempo limite de atendimento baseado na última mensagem (ou data de criação)
+      if (card.isAtivo && tempoAtendimento > 0) {
+        final referenceDate = card.ultimaMensagemData ?? card.dataCriacao;
+        final expirationDate = referenceDate.add(Duration(hours: tempoAtendimento));
+        if (now.isAfter(expirationDate) || now.isAtSameMomentAs(expirationDate)) {
           cardsToExpire.add(card);
           continue; // Pula para o próximo card, já que este vai ser inativado
         }

@@ -33,7 +33,48 @@ class AdminEmpresaService {
 
   Future<void> updateTempoAtendimento(
       String tenantId, int tempoAtendimento) async {
-    await _tenantsRef().doc(tenantId).update({'tempo_atendimento': tempoAtendimento});
+    final batch = _firestore.batch();
+
+    // Atualiza a configuração do tenant
+    final tenantRef = _tenantsRef().doc(tenantId);
+    batch.update(tenantRef, {'tempo_atendimento': tempoAtendimento});
+
+    // Pega todos os cards ativos deste tenant para atualizar isAtivo caso já tenham expirado
+    final cardsSnapshot = await _firestore
+        .collection('tenant')
+        .doc(tenantId)
+        .collection('atendimento')
+        .doc('board')
+        .collection('historico')
+        .where('is_ativo', isEqualTo: true)
+        .get();
+
+    final now = DateTime.now();
+
+    for (final doc in cardsSnapshot.docs) {
+      final data = doc.data();
+      // Emula a mesma logica de _processBoardData
+      if (tempoAtendimento > 0) {
+        final dataCriacao =
+            (data['data_criacao'] as Timestamp?)?.toDate() ?? now;
+        final ultimaMensagemData =
+            (data['ultima_mensagem_data'] as Timestamp?)?.toDate();
+        final referenceDate = ultimaMensagemData ?? dataCriacao;
+
+        final expirationDate =
+            referenceDate.add(Duration(hours: tempoAtendimento));
+
+        if (now.isAfter(expirationDate) ||
+            now.isAtSameMomentAs(expirationDate)) {
+          batch.update(doc.reference, {
+            'is_ativo': false,
+            'data_ultima_atualizacao': FieldValue.serverTimestamp(),
+          });
+        }
+      }
+    }
+
+    await batch.commit();
   }
 
   Future<void> updateHorarioFuncionamento(

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:module_atendimento/models/atendimento_column_model.dart';
 import 'package:module_atendimento/models/atendimento_model.dart';
 import 'package:module_atendimento/providers/atendimento_provider.dart';
@@ -262,6 +263,8 @@ class _AtendimentoScreenState extends ConsumerState<AtendimentoScreen> {
             ultimaMensagem: '',
             ultimaMensagemData: DateTime.now(),
             mensagensNaoLidas: 0,
+            funcionarioResponsavelId:
+                FirebaseAuth.instance.currentUser?.uid, // Pega o logado
             leadId: leadId,
             fotoUrl: fotoUrl,
           );

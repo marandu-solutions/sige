@@ -308,7 +308,7 @@ class _AddAtendimentoCardDialogState
             }
           },
           icon: const Icon(LucideIcons.check),
-          label: const Text('ADICIONAR'),
+          label: const Text('SALVAR'),
         ),
       ],
     );

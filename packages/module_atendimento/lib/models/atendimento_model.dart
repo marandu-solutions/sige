@@ -23,7 +23,6 @@ class AtendimentoModel {
   final String? fotoUrl;
 
   final String? protocolo;
-  final DateTime? expAtendimento;
   final bool isAtivo;
 
   AtendimentoModel({
@@ -45,7 +44,6 @@ class AtendimentoModel {
     this.leadId,
     this.fotoUrl,
     this.protocolo,
-    this.expAtendimento,
     this.isAtivo = true,
   });
 
@@ -80,7 +78,6 @@ class AtendimentoModel {
       leadId: map['lead_id'],
       fotoUrl: map['foto_url'] ?? map['fotoUrl'],
       protocolo: map['protocolo'],
-      expAtendimento: (map['exp_atendimento'] as Timestamp?)?.toDate(),
       isAtivo: map['is_ativo'] ?? true,
     );
   }
@@ -109,8 +106,6 @@ class AtendimentoModel {
       'lead_id': leadId,
       'foto_url': fotoUrl,
       'protocolo': protocolo,
-      'exp_atendimento':
-          expAtendimento != null ? Timestamp.fromDate(expAtendimento!) : null,
       'is_ativo': isAtivo,
     };
   }
@@ -135,7 +130,6 @@ class AtendimentoModel {
     String? leadId,
     String? fotoUrl,
     String? protocolo,
-    DateTime? expAtendimento,
     bool? isAtivo,
   }) {
     return AtendimentoModel(
@@ -159,7 +153,6 @@ class AtendimentoModel {
       leadId: leadId ?? this.leadId,
       fotoUrl: fotoUrl ?? this.fotoUrl,
       protocolo: protocolo ?? this.protocolo,
-      expAtendimento: expAtendimento ?? this.expAtendimento,
       isAtivo: isAtivo ?? this.isAtivo,
     );
   }
