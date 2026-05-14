@@ -11,6 +11,7 @@ import 'components/funcionario_atendimento_column.dart';
 import 'components/add_lead_gerente_dialog.dart';
 import 'components/readonly_kanban/readonly_atendimento_screen.dart';
 import 'components/readonly_kanban/readonly_chat_page.dart';
+import 'components/exp_atendimento_config_dialog.dart';
 import 'history_atendimento_screen/history_atendimento_screen.dart';
 
 class GerenteAtendimentoScreen extends ConsumerStatefulWidget {
@@ -54,6 +55,18 @@ class _GerenteAtendimentoScreenState
         backgroundColor: colorScheme.primary,
         foregroundColor: colorScheme.onPrimary,
         actions: [
+          IconButton(
+            icon: const Icon(LucideIcons.clock),
+            tooltip: 'Configurar tempo de expiração',
+            onPressed: () {
+              showDialog(
+                context: context,
+                builder: (context) => ExpAtendimentoConfigDialog(
+                  tenantId: widget.tenantId,
+                ),
+              );
+            },
+          ),
           IconButton(
             icon: const Icon(LucideIcons.history),
             tooltip: 'Histórico de Atendimentos',
@@ -139,10 +152,19 @@ class _GerenteAtendimentoScreenState
     );
   }
 
-  void _showAddLeadDialog(BuildContext context) {
+  void _showAddLeadDialog(BuildContext context) async {
     final atendimentoAsync =
         ref.read(gerenteAtendimentoProvider(widget.tenantId));
     final funcionariosAsync = ref.read(funcionariosProvider(widget.tenantId));
+
+    // Fetch tenant config to get expAtendimentoHours
+    final adminService = ref.read(adminEmpresaServiceProvider);
+    final tenant = await adminService.getTenant(widget.tenantId);
+
+    if (!context.mounted) return;
+
+    final int? expAtendimentoHours = tenant?.tempoAtendimento;
+    final int tempo = expAtendimentoHours ?? 0;
 
     if (atendimentoAsync.valueOrNull?.columns.isEmpty ?? true) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -171,6 +193,11 @@ class _GerenteAtendimentoScreenState
         funcionarios: funcionariosAsync.value ?? [],
         onSave: (titulo, clienteNome, clienteTelefone, prioridade, dataLimite,
             colunaId, funcionarioId, leadId) {
+          DateTime? expAtendimento;
+          if (tempo > 0) {
+            expAtendimento = DateTime.now().add(Duration(hours: tempo));
+          }
+
           final newCard = AtendimentoModel(
             id: 'temp_${Random().nextInt(1000000)}',
             tenantId: widget.tenantId,
@@ -188,6 +215,7 @@ class _GerenteAtendimentoScreenState
             mensagensNaoLidas: 0,
             funcionarioResponsavelId: funcionarioId,
             leadId: leadId,
+            expAtendimento: expAtendimento,
           );
           ref
               .read(gerenteAtendimentoProvider(widget.tenantId).notifier)

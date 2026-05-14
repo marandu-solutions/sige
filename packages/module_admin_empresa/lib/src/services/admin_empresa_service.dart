@@ -31,6 +31,11 @@ class AdminEmpresaService {
     await _tenantsRef().doc(tenantId).update({'config': config});
   }
 
+  Future<void> updateTempoAtendimento(
+      String tenantId, int tempoAtendimento) async {
+    await _tenantsRef().doc(tenantId).update({'tempo_atendimento': tempoAtendimento});
+  }
+
   Future<void> updateHorarioFuncionamento(
       String tenantId, Map<String, dynamic> horario) async {
     // Atualiza o horário dentro da configuração do tenant

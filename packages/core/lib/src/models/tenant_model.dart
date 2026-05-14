@@ -7,6 +7,7 @@ class TenantModel {
   final String status;
   final List<String> modulosAtivos;
   final Map<String, dynamic> config;
+  final int tempoAtendimento;
 
   TenantModel({
     required this.id,
@@ -15,6 +16,7 @@ class TenantModel {
     required this.status,
     required this.modulosAtivos,
     required this.config,
+    this.tempoAtendimento = 0,
   });
 
   factory TenantModel.fromFirestore(DocumentSnapshot doc) {
@@ -30,6 +32,7 @@ class TenantModel {
       status: map['status'] ?? 'ativo',
       modulosAtivos: List<String>.from(map['modulos_ativos'] ?? []),
       config: Map<String, dynamic>.from(map['config'] ?? {}),
+      tempoAtendimento: map['tempo_atendimento'] ?? 0,
     );
   }
 
@@ -40,6 +43,7 @@ class TenantModel {
       'status': status,
       'modulos_ativos': modulosAtivos,
       'config': config,
+      'tempo_atendimento': tempoAtendimento,
     };
   }
 
@@ -52,6 +56,7 @@ class TenantModel {
     String? status,
     List<String>? modulosAtivos,
     Map<String, dynamic>? config,
+    int? tempoAtendimento,
   }) {
     return TenantModel(
       id: id ?? this.id,
@@ -60,7 +65,7 @@ class TenantModel {
       status: status ?? this.status,
       modulosAtivos: modulosAtivos ?? this.modulosAtivos,
       config: config ?? this.config,
+      tempoAtendimento: tempoAtendimento ?? this.tempoAtendimento,
     );
   }
 }
-
