@@ -178,8 +178,10 @@ class AtendimentoService {
       // 1. Verifica expiração do tempo limite de atendimento baseado na última mensagem (ou data de criação)
       if (card.isAtivo && tempoAtendimento > 0) {
         final referenceDate = card.ultimaMensagemData ?? card.dataCriacao;
-        final expirationDate = referenceDate.add(Duration(hours: tempoAtendimento));
-        if (now.isAfter(expirationDate) || now.isAtSameMomentAs(expirationDate)) {
+        final expirationDate =
+            referenceDate.add(Duration(hours: tempoAtendimento));
+        if (now.isAfter(expirationDate) ||
+            now.isAtSameMomentAs(expirationDate)) {
           cardsToExpire.add(card);
           continue; // Pula para o próximo card, já que este vai ser inativado
         }
@@ -456,12 +458,17 @@ class AtendimentoService {
   }
 
   Future<void> addMensagem(MensagemModel mensagem) async {
-    await _mensagensRef(mensagem.tenantId).add(mensagem);
+    // Usamos toMap(useServerTimestamp: true) diretamente para garantir o horário correto do servidor
+    final docRef = await _firestore
+        .collection('tenant')
+        .doc(mensagem.tenantId)
+        .collection('interactions')
+        .add(mensagem.toMap(useServerTimestamp: true));
 
     // Atualiza o card com a última mensagem
     await _cardsRef(mensagem.tenantId).doc(mensagem.atendimentoId).update({
       'ultima_mensagem': mensagem.texto,
-      'ultima_mensagem_data': Timestamp.fromDate(mensagem.dataEnvio),
+      'ultima_mensagem_data': FieldValue.serverTimestamp(),
       'mensagens_nao_lidas': FieldValue.increment(mensagem.isUsuario ? 0 : 1),
       'data_ultima_atualizacao': FieldValue.serverTimestamp(),
     });
@@ -501,7 +508,11 @@ class AtendimentoService {
       );
 
       // Salva na coleção de interações do tenant
-      await _mensagensRef(tenantId).add(mensagem);
+      await _firestore
+          .collection('tenant')
+          .doc(tenantId)
+          .collection('interactions')
+          .add(mensagem.toMap(useServerTimestamp: true));
     } catch (e) {
       throw Exception('Erro ao enviar mensagem: $e');
     }
