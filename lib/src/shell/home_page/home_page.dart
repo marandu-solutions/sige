@@ -1,13 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import 'package:module_auth/src/auth_service.dart';
+import 'package:sige/src/features/auth/auth_service.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 import '../../shell/home_page/components/bottom_nav_bar.dart';
 import '../../shell/home_page/components/sidebar.dart';
 import 'package:sige/src/core/routes/app_routes.dart';
-import 'package:module_basic_dashboard/module_basic_dashboard.dart';
-import 'package:module_estoque/module_estoque.dart';
-import 'package:module_kanban/module_kanban.dart';
 
 class HomePage extends ConsumerStatefulWidget {
   final Map<String, dynamic>? userData;
@@ -37,40 +35,56 @@ class _HomePageState extends ConsumerState<HomePage> {
     List<String> modulosPermitidos = List<String>.from(
       widget.tenantData?['modulos_ativos'] ?? [],
     );
-    // Force include module_map for testing
-    if (!modulosPermitidos.contains('module_map')) {
-      modulosPermitidos.add('module_map');
-    }
 
-    // Filtragem por permissão do funcionário
+    // Filtragem por permissão do usuário
     final role =
         authService.userData?['role']?.toString().toLowerCase() ??
         'funcionario';
+    final isManager = role == 'admin' || role == 'dono' || role == 'gerente';
 
-    // Se não for admin/dono, filtra pelo acesso delegado
-    if (role != 'admin' && role != 'dono') {
+    if (!isManager) {
       final employeeModules = List<String>.from(
         authService.employeeData?['modulos_acesso'] ?? [],
       );
 
       // Intersecção: Só mostra o que a empresa tem E o funcionário pode ver
       modulosPermitidos = modulosPermitidos
-          .where((m) => employeeModules.contains(m))
+          .where((m) =>
+              employeeModules.contains(m) ||
+              employeeModules.contains('module_$m') ||
+              employeeModules.contains(m.replaceFirst('module_', '')))
           .toList();
+    } else {
+      // Para gestores (admin/dono/gerente): se a empresa tem atendimento,
+      // habilita a tela de Supervisão da Equipe além da tela pessoal de atendimento
+      final hasAtendimento = modulosPermitidos
+          .any((m) => m.contains('atendimento') || m.contains('kanban'));
+      if (hasAtendimento &&
+          !modulosPermitidos.contains('gerente_atendimento') &&
+          !modulosPermitidos.contains('module_gerente_atendimento')) {
+        modulosPermitidos.add('gerente_atendimento');
+      }
     }
 
     final List<Widget> widgets = [];
     final List<Map<String, dynamic>> infos = [];
 
     for (final moduloNome in modulosPermitidos) {
-      if (mapaModulos.containsKey(moduloNome)) {
-        final moduloWidget = mapaModulos[moduloNome]!;
+      final normalized = moduloNome.replaceFirst('module_', '');
+      // Remove kanban avulso (já incorporado dentro de Atendimento e Supervisão)
+      if (normalized == 'kanban') continue;
+      // Funcionário comum não tem acesso à tela de supervisão
+      if (!isManager && normalized == 'gerente_atendimento') continue;
+
+      if (mapaModulos.containsKey(moduloNome) || mapaModulos.containsKey(normalized)) {
+        final moduloWidget =
+            mapaModulos[moduloNome] ?? mapaModulos[normalized]!;
         widgets.add(moduloWidget);
 
         final metadata = _getModuloMetadata(moduloNome);
         infos.add({
-          'titulo': metadata['titulo'] as String,
-          'icone': metadata['icone'] as IconData,
+          'titulo': (metadata['titulo'] as String?) ?? moduloNome,
+          'icone': (metadata['icone'] as IconData?) ?? Icons.folder,
         });
       }
     }
@@ -79,49 +93,45 @@ class _HomePageState extends ConsumerState<HomePage> {
   }
 
   Map<String, dynamic> _getModuloMetadata(String moduloNome) {
+    final normalized = moduloNome.replaceFirst('module_', '');
     final metadataMap = {
-      'module_basic_dashboard': {
+      'dashboard': {
         'rota': AppRoutes.dashboard,
         'titulo': 'Dashboard',
-        'icone': Icons.dashboard,
+        'icone': LucideIcons.layoutDashboard,
       },
-      'module_estoque': {
+      'basic_dashboard': {
+        'rota': AppRoutes.dashboard,
+        'titulo': 'Dashboard',
+        'icone': LucideIcons.layoutDashboard,
+      },
+      'estoque': {
         'rota': AppRoutes.estoque,
         'titulo': 'Estoque',
-        'icone': Icons.inventory,
+        'icone': LucideIcons.package,
       },
-      'module_kanban': {
-        'rota': AppRoutes.kanban,
-        'titulo': 'Kanban',
-        'icone': Icons.view_kanban,
-      },
-      'module_atendimento': {
+      'atendimento': {
         'rota': AppRoutes.atendimento,
         'titulo': 'Atendimento',
-        'icone': Icons.chat,
+        'icone': LucideIcons.messageSquareQuote,
       },
-      'module_admin_empresa': {
+      'gerente_atendimento': {
+        'rota': AppRoutes.gerenteAtendimento,
+        'titulo': 'Supervisão',
+        'icone': LucideIcons.usersRound,
+      },
+      'admin_empresa': {
         'rota': AppRoutes.adminEmpresa,
         'titulo': 'Admin',
-        'icone': Icons.admin_panel_settings,
+        'icone': LucideIcons.shieldCheck,
       },
-      'module_gerente_atendimento': {
-        'rota': AppRoutes.gerenteAtendimento,
-        'titulo': 'Gerente',
-        'icone': Icons.supervisor_account,
-      },
-      'module_leads': {
+      'leads': {
         'rota': AppRoutes.leads,
         'titulo': 'Leads',
-        'icone': Icons.contacts,
-      },
-      'module_map': {
-        'rota': AppRoutes.map,
-        'titulo': 'Mapa',
-        'icone': Icons.map,
+        'icone': LucideIcons.contact2,
       },
     };
-    return metadataMap[moduloNome] ?? {};
+    return metadataMap[normalized] ?? metadataMap[moduloNome] ?? {};
   }
 
   void _onItemTapped(int index) {
@@ -251,6 +261,12 @@ class _HomePageState extends ConsumerState<HomePage> {
           );
         } else {
           // --- LAYOUT DESKTOP ---
+          final tenantNome = widget.tenantData?['nome_fantasia'] as String? ??
+              widget.tenantData?['nome'] as String? ??
+              'SIGE Gestão';
+          final tenantLogoUrl =
+              widget.tenantData?['branding']?['logo_url'] as String?;
+
           return Scaffold(
             body: Row(
               children: [
@@ -259,20 +275,20 @@ class _HomePageState extends ConsumerState<HomePage> {
                   onItemSelected: _onItemTapped,
                   userName: userName,
                   userEmail: userEmail,
+                  tenantNome: tenantNome,
+                  tenantLogoUrl: tenantLogoUrl,
                   onLogout: _performLogout,
                   modulosInfo: modulosInfo,
                 ),
                 Expanded(
                   child: Padding(
-                    padding: const EdgeInsets.fromLTRB(0, 24, 24, 24),
-                    child: Card(
-                      elevation: 4.0,
-                      shadowColor: Colors.black.withOpacity(0.1),
-                      clipBehavior: Clip.antiAlias,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(20),
+                    padding: const EdgeInsets.all(16),
+                    child: ClipRRect(
+                      borderRadius: BorderRadius.circular(16),
+                      child: Container(
+                        color: Theme.of(context).cardColor,
+                        child: modulosAtivos[_selectedIndex],
                       ),
-                      child: modulosAtivos[_selectedIndex],
                     ),
                   ),
                 ),

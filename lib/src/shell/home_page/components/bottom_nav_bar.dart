@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:google_nav_bar/google_nav_bar.dart';
-import 'package:lucide_icons/lucide_icons.dart';
 
 class BottomNavBar extends StatelessWidget {
   final int selectedIndex;

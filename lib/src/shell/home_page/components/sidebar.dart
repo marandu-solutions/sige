@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:lucide_icons/lucide_icons.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 class Sidebar extends StatelessWidget {
   final int selectedIndex;
@@ -7,6 +7,8 @@ class Sidebar extends StatelessWidget {
   final VoidCallback onLogout;
   final String userName;
   final String userEmail;
+  final String? tenantNome;
+  final String? tenantLogoUrl;
   final List<Map<String, dynamic>> modulosInfo;
 
   const Sidebar({
@@ -16,6 +18,8 @@ class Sidebar extends StatelessWidget {
     required this.onLogout,
     required this.userName,
     required this.userEmail,
+    this.tenantNome,
+    this.tenantLogoUrl,
     required this.modulosInfo,
   });
 
@@ -27,33 +31,73 @@ class Sidebar extends StatelessWidget {
 
     return Drawer(
       backgroundColor: cs.surface,
-      elevation: 2,
+      elevation: 0,
       width: 280,
+      shape: const RoundedRectangleBorder(),
       child: Column(
         children: [
-          UserAccountsDrawerHeader(
-            accountName: Text(
-              userName,
-              style: tt.titleMedium?.copyWith(
-                fontWeight: FontWeight.bold,
-                color: cs.onPrimary,
-              ),
+          // Header com Branding do Tenant (Cortesia Profissional)
+          Container(
+            padding: const EdgeInsets.fromLTRB(20, 48, 20, 20),
+            color: cs.primary,
+            child: Row(
+              children: [
+                if (tenantLogoUrl != null && tenantLogoUrl!.isNotEmpty)
+                  ClipRRect(
+                    borderRadius: BorderRadius.circular(8),
+                    child: Image.network(
+                      tenantLogoUrl!,
+                      width: 44,
+                      height: 44,
+                      fit: BoxFit.cover,
+                      errorBuilder: (_, __, ___) => CircleAvatar(
+                        backgroundColor: cs.onPrimary,
+                        child: Text(
+                          (tenantNome ?? 'E')[0].toUpperCase(),
+                          style: TextStyle(color: cs.primary, fontWeight: FontWeight.bold),
+                        ),
+                      ),
+                    ),
+                  )
+                else
+                  CircleAvatar(
+                    backgroundColor: cs.onPrimary,
+                    radius: 22,
+                    child: Text(
+                      userName.isNotEmpty ? userName[0].toUpperCase() : 'U',
+                      style: TextStyle(color: cs.primary, fontWeight: FontWeight.bold, fontSize: 18),
+                    ),
+                  ),
+                const SizedBox(width: 14),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        tenantNome ?? userName,
+                        style: tt.titleMedium?.copyWith(
+                          fontWeight: FontWeight.bold,
+                          color: cs.onPrimary,
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        userEmail,
+                        style: tt.bodySmall?.copyWith(
+                          color: cs.onPrimary.withValues(alpha: 0.8),
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ],
+                  ),
+                ),
+              ],
             ),
-            accountEmail: Text(
-              userEmail,
-              style: tt.bodyMedium?.copyWith(
-                color: cs.onPrimary.withOpacity(0.8),
-              ),
-            ),
-            currentAccountPicture: CircleAvatar(
-              backgroundColor: cs.onPrimary,
-              child: Text(
-                userName.isNotEmpty ? userName[0].toUpperCase() : 'U',
-                style: tt.headlineMedium?.copyWith(color: cs.primary),
-              ),
-            ),
-            decoration: BoxDecoration(color: cs.primary),
           ),
+          const SizedBox(height: 12),
           for (int i = 0; i < modulosInfo.length; i++)
             _buildNavItem(
               context: context,

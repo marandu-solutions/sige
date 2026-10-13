@@ -34,36 +34,33 @@ dependencies:
   # The following adds the Cupertino Icons font to your application.
   # Use with the CupertinoIcons class for iOS style icons.
   cupertino_icons: ^1.0.8
+  # Core dependencies
   firebase_core: ^4.2.1
   firebase_auth: ^6.1.2
   cloud_firestore: ^6.1.0
-  core:
-    path: packages/core
-  module_auth:
-    path: packages/module_auth
-  module_basic_dashboard:
-    path: packages/module_basic_dashboard
-  module_estoque:
-    path: packages/module_estoque
-  module_kanban:
-    path: packages/module_kanban
-  module_atendimento:
-    path: packages/module_atendimento
-
-
-  provider: ^6.1.5+1
-  google_nav_bar: ^5.0.7
-  lucide_icons: ^0.257.0
-  module_admin_empresa:
-    path: packages/module_admin_empresa
-  module_gerente_atendimento:
-    path: packages/module_gerente_atendimento
-  module_leads:
-    path: packages/module_leads
-  module_map:
-    path: packages/module_map
+  firebase_storage: ^13.0.2
+  cloud_functions: ^6.0.5
+  flutter_riverpod: ^2.5.1
+  intl: ^0.20.2
+  http: ^1.6.0
   shared_preferences: ^2.5.3
   uuid: ^4.5.2
+  flutter_svg: ^2.2.3
+  google_nav_bar: ^5.0.7
+  data_table_2: ^2.5.8
+  flutter_colorpicker: ^1.1.0
+  just_audio: ^0.10.5
+  file_picker: ^10.3.7
+  record: ^6.1.2
+  permission_handler: ^12.0.1
+  video_player: ^2.10.1
+  chewie: ^1.13.0
+  path_provider: ^2.1.5
+  timeago: ^3.7.1
+  provider: ^6.1.5+1
+  fl_chart: ^0.66.2
+  google_fonts: ^6.2.1
+  lucide_icons_flutter: ^3.1.25
 
 dev_dependencies:
   flutter_test:
@@ -87,10 +84,8 @@ flutter:
   # the material Icons class.
   uses-material-design: true
 
-  # To add assets to your application, add an assets section, like this:
-  # assets:
-  #   - images/a_dot_burr.jpeg
-  #   - images/a_dot_ham.jpeg
+  assets:
+    - assets/icons/
 
   # An image asset can refer to one or more resolution-specific "variants", see
   # https://flutter.dev/to/resolution-aware-images

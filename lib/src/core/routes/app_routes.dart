@@ -1,16 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:sige/src/shell/home_page/home_page.dart';
 
-import 'package:module_auth/login_screen.dart';
-import 'package:module_auth/src/auth_wrapper.dart';
-import 'package:module_basic_dashboard/module_basic_dashboard.dart';
-import 'package:module_estoque/module_estoque.dart';
-import 'package:module_kanban/module_kanban.dart';
-import 'package:module_atendimento/module_atendimento.dart';
-import 'package:module_admin_empresa/src/screens/admin_dashboard_screen.dart';
-import 'package:module_gerente_atendimento/module_gerente_atendimento.dart';
-import 'package:module_leads/module_leads.dart';
-import 'package:module_map/module_map.dart';
+import 'package:sige/src/features/auth/login_screen.dart';
+import 'package:sige/src/features/auth/auth_wrapper.dart';
+import 'package:sige/src/features/dashboard/atendimento_dashboard_screen.dart';
+import 'package:sige/src/features/dashboard/dashboard_screen.dart';
+import 'package:sige/src/features/estoque/screens/estoque_screen.dart';
+import 'package:sige/src/features/atendimento/screens/atendimento_screen.dart';
+import 'package:sige/src/features/atendimento/screens/gerente_atendimento_screen.dart';
+import 'package:sige/src/features/admin_empresa/src/screens/admin_dashboard_screen.dart';
+import 'package:sige/src/features/leads/src/screens/leads_screen.dart';
 
 class AppRoutes {
   static const String root = '/';
@@ -23,19 +22,21 @@ class AppRoutes {
   static const String adminEmpresa = '/admin_empresa';
   static const String gerenteAtendimento = '/gerente_atendimento';
   static const String leads = '/leads';
-  static const String map = '/map';
 
-  // Mapa de módulos disponíveis
-  // Mapa de módulos disponíveis
+  // Mapa de módulos disponíveis - suporta nomes curtos (MD02) e prefixados (legado)
   static Map<String, Widget> modulosDisponiveis(String tenantId) => {
-    'module_basic_dashboard': const AtendimentoDashboardScreen(),
-    'module_estoque': EstoqueScreen(tenantId: tenantId),
-    'module_kanban': KanbanScreen(tenantId: tenantId),
+    'atendimento': AtendimentoScreen(tenantId: tenantId),
     'module_atendimento': AtendimentoScreen(tenantId: tenantId),
-    'module_admin_empresa': AdminDashboardScreen(tenantId: tenantId),
+    'gerente_atendimento': GerenteAtendimentoScreen(tenantId: tenantId),
     'module_gerente_atendimento': GerenteAtendimentoScreen(tenantId: tenantId),
+    'estoque': EstoqueScreen(tenantId: tenantId),
+    'module_estoque': EstoqueScreen(tenantId: tenantId),
+    'leads': LeadsScreen(tenantId: tenantId),
     'module_leads': LeadsScreen(tenantId: tenantId),
-    'module_map': const MapScreen(),
+    'admin_empresa': AdminDashboardScreen(tenantId: tenantId),
+    'module_admin_empresa': AdminDashboardScreen(tenantId: tenantId),
+    'dashboard': const AtendimentoDashboardScreen(),
+    'module_basic_dashboard': const AtendimentoDashboardScreen(),
   };
 
   static Route<dynamic> generateRoute(RouteSettings settings) {
@@ -63,23 +64,10 @@ class AppRoutes {
         }
         return _errorRoute(settings.name);
       case atendimento:
-        if (args != null && args.containsKey('tenantId')) {
-          return MaterialPageRoute(
-            builder: (_) => AtendimentoScreen(tenantId: args['tenantId']),
-          );
-        }
-        return _errorRoute(settings.name);
       case kanban:
         if (args != null && args.containsKey('tenantId')) {
           return MaterialPageRoute(
-            builder: (_) => KanbanScreen(tenantId: args['tenantId']),
-          );
-        }
-        return _errorRoute(settings.name);
-      case adminEmpresa:
-        if (args != null && args.containsKey('tenantId')) {
-          return MaterialPageRoute(
-            builder: (_) => AdminDashboardScreen(tenantId: args['tenantId']),
+            builder: (_) => AtendimentoScreen(tenantId: args['tenantId']),
           );
         }
         return _errorRoute(settings.name);
@@ -91,6 +79,13 @@ class AppRoutes {
           );
         }
         return _errorRoute(settings.name);
+      case adminEmpresa:
+        if (args != null && args.containsKey('tenantId')) {
+          return MaterialPageRoute(
+            builder: (_) => AdminDashboardScreen(tenantId: args['tenantId']),
+          );
+        }
+        return _errorRoute(settings.name);
       case leads:
         if (args != null && args.containsKey('tenantId')) {
           return MaterialPageRoute(
@@ -98,8 +93,6 @@ class AppRoutes {
           );
         }
         return _errorRoute(settings.name);
-      case map:
-        return MaterialPageRoute(builder: (_) => const MapScreen());
       default:
         return _errorRoute(settings.name);
     }
