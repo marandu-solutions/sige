@@ -133,13 +133,17 @@ class AppThemes {
 
   static final FilledButtonThemeData _filledButtonTheme = FilledButtonThemeData(
     style: FilledButton.styleFrom(
+      backgroundColor: const Color(0xFF3F51B5),
+      foregroundColor: Colors.white,
+      iconColor: Colors.white,
       padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 24),
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(12),
       ),
-      textStyle: TextStyle(
+      textStyle: const TextStyle(
         fontSize: 16,
         fontWeight: FontWeight.w600,
+        color: Colors.white,
       ),
     ),
   );
