@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_svg/flutter_svg.dart';
-import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'auth_service.dart';
 
 class MaranduLogo extends StatelessWidget {
@@ -130,7 +129,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
             controller: _emailController,
             decoration: inputDecoration.copyWith(
               labelText: 'Email',
-              prefixIcon: const Icon(LucideIcons.mail),
+              prefixIcon: const Icon(Icons.email_outlined),
             ),
             keyboardType: TextInputType.emailAddress,
             validator: (value) => (value == null || !value.contains('@'))
@@ -143,10 +142,10 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
             obscureText: !_isPasswordVisible,
             decoration: inputDecoration.copyWith(
               labelText: 'Senha',
-              prefixIcon: const Icon(LucideIcons.lock),
+              prefixIcon: const Icon(Icons.lock_outline),
               suffixIcon: IconButton(
                 icon: Icon(
-                    _isPasswordVisible ? LucideIcons.eyeOff : LucideIcons.eye),
+                    _isPasswordVisible ? Icons.visibility_off_outlined : Icons.visibility_outlined),
                 onPressed: () =>
                     setState(() => _isPasswordVisible = !_isPasswordVisible),
               ),
@@ -160,7 +159,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
             width: double.infinity,
             height: 48,
             child: FilledButton.icon(
-              icon: isLoading ? const SizedBox.shrink() : const Icon(LucideIcons.logIn),
+              icon: isLoading ? const SizedBox.shrink() : const Icon(Icons.login),
               onPressed: isLoading ? null : _handleLogin,
               label: isLoading
                   ? const SizedBox(

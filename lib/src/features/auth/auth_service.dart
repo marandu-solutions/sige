@@ -83,7 +83,6 @@ class AuthService extends ChangeNotifier {
     } catch (e) {
       debugPrint('AuthService: Erro ao carregar dados do usuário: $e');
     }
-    notifyListeners();
   }
 
   Future<bool> signIn({required String email, required String password}) async {

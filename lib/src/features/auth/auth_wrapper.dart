@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'login_screen.dart';
 import 'auth_service.dart';
+import '../../shell/home_page/home_page.dart';
 
 class AuthWrapper extends ConsumerWidget {
   const AuthWrapper({super.key});
@@ -10,18 +11,13 @@ class AuthWrapper extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final authService = ref.watch(authServiceProvider);
 
-    ref.listen(authServiceProvider, (previous, next) {
-      if (next.status == AuthStatus.authenticated && next.userData != null) {
-        WidgetsBinding.instance.addPostFrameCallback((_) {
-          Navigator.pushReplacementNamed(context, '/homepage', arguments: {
-            'userData': next.userData,
-            'tenantData': next.tenantData,
-          });
-        });
-      }
-    });
-
-    if (authService.status == AuthStatus.authenticated) {
+    if (authService.status == AuthStatus.authenticated && authService.userData != null) {
+      return HomePage(
+        userData: authService.userData,
+        tenantData: authService.tenantData,
+      );
+    } else if (authService.status == AuthStatus.authenticating ||
+               authService.status == AuthStatus.uninitialized) {
       return const Scaffold(
         body: Center(
           child: CircularProgressIndicator(),

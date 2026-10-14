@@ -25,6 +25,9 @@ class EventBus {
     }
   }
 
+  void publish(SigeEvent event) => fire(event);
+
+
   Stream<T> on<T extends SigeEvent>() {
     return _controller.stream.where((e) => e is T).cast<T>();
   }

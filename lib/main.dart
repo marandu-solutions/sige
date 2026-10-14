@@ -5,10 +5,16 @@ import 'package:sige/src/core/routes/app_routes.dart';
 import 'package:sige/src/core/core.dart';
 import 'package:sige/src/features/auth/auth_service.dart';
 import 'package:sige/src/features/auth/auth_wrapper.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'firebase_options.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  // Pré-aquece o módulo de ícones na raiz (stack rasa) para evitar
+  // que o DDC (Flutter Web) estoure a pilha de chamadas durante o build de widgets
+  try {
+    final _ = LucideIcons.check;
+  } catch (_) {}
   await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
 
   runApp(const ProviderScope(child: MyApp()));

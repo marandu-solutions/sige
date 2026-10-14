@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 class Sidebar extends StatelessWidget {
   final int selectedIndex;
@@ -110,7 +109,7 @@ class Sidebar extends StatelessWidget {
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 8.0, vertical: 4.0),
             child: ListTile(
-              leading: Icon(LucideIcons.logOut, color: cs.error),
+              leading: Icon(Icons.logout_rounded, color: cs.error),
               title: Text(
                 'Sair',
                 style: tt.labelLarge?.copyWith(

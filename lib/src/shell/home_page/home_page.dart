@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:sige/src/features/auth/auth_service.dart';
-import 'package:lucide_icons_flutter/lucide_icons.dart';
 import '../../shell/home_page/components/bottom_nav_bar.dart';
 import '../../shell/home_page/components/sidebar.dart';
 import 'package:sige/src/core/routes/app_routes.dart';
@@ -68,6 +67,7 @@ class _HomePageState extends ConsumerState<HomePage> {
 
     final List<Widget> widgets = [];
     final List<Map<String, dynamic>> infos = [];
+    final Set<String> modulosAdicionados = {};
 
     for (final moduloNome in modulosPermitidos) {
       final normalized = moduloNome.replaceFirst('module_', '');
@@ -75,16 +75,19 @@ class _HomePageState extends ConsumerState<HomePage> {
       if (normalized == 'kanban') continue;
       // Funcionário comum não tem acesso à tela de supervisão
       if (!isManager && normalized == 'gerente_atendimento') continue;
+      // Evita duplicatas na navegação
+      if (modulosAdicionados.contains(normalized)) continue;
 
       if (mapaModulos.containsKey(moduloNome) || mapaModulos.containsKey(normalized)) {
         final moduloWidget =
             mapaModulos[moduloNome] ?? mapaModulos[normalized]!;
         widgets.add(moduloWidget);
+        modulosAdicionados.add(normalized);
 
-        final metadata = _getModuloMetadata(moduloNome);
+        final metadata = _getModuloMetadata(normalized);
         infos.add({
-          'titulo': (metadata['titulo'] as String?) ?? moduloNome,
-          'icone': (metadata['icone'] as IconData?) ?? Icons.folder,
+          'titulo': (metadata['titulo'] as String?) ?? normalized,
+          'icone': (metadata['icone'] as IconData?) ?? Icons.folder_rounded,
         });
       }
     }
@@ -98,37 +101,37 @@ class _HomePageState extends ConsumerState<HomePage> {
       'dashboard': {
         'rota': AppRoutes.dashboard,
         'titulo': 'Dashboard',
-        'icone': LucideIcons.layoutDashboard,
+        'icone': Icons.dashboard_rounded,
       },
       'basic_dashboard': {
         'rota': AppRoutes.dashboard,
         'titulo': 'Dashboard',
-        'icone': LucideIcons.layoutDashboard,
+        'icone': Icons.dashboard_rounded,
       },
       'estoque': {
         'rota': AppRoutes.estoque,
         'titulo': 'Estoque',
-        'icone': LucideIcons.package,
+        'icone': Icons.inventory_2_rounded,
       },
       'atendimento': {
         'rota': AppRoutes.atendimento,
         'titulo': 'Atendimento',
-        'icone': LucideIcons.messageSquareQuote,
+        'icone': Icons.forum_rounded,
       },
       'gerente_atendimento': {
         'rota': AppRoutes.gerenteAtendimento,
         'titulo': 'Supervisão',
-        'icone': LucideIcons.usersRound,
+        'icone': Icons.groups_rounded,
       },
       'admin_empresa': {
         'rota': AppRoutes.adminEmpresa,
         'titulo': 'Admin',
-        'icone': LucideIcons.shieldCheck,
+        'icone': Icons.admin_panel_settings_rounded,
       },
       'leads': {
         'rota': AppRoutes.leads,
         'titulo': 'Leads',
-        'icone': LucideIcons.contact2,
+        'icone': Icons.contacts_rounded,
       },
     };
     return metadataMap[normalized] ?? metadataMap[moduloNome] ?? {};

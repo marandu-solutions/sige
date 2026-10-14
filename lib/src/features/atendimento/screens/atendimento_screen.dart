@@ -148,30 +148,99 @@ class _AtendimentoScreenState extends ConsumerState<AtendimentoScreen> {
           ],
         ),
         actions: [
-          IconButton(
-            icon: const Icon(LucideIcons.history, size: 18),
-            tooltip: 'Histórico de Atendimentos',
-            onPressed: () {
-              Navigator.of(context).push(
-                MaterialPageRoute(
-                  builder: (context) => HistoryAtendimentoScreen(
-                    tenantId: widget.tenantId,
+          // Grupo de Ações Secundárias em cápsula integrada
+          Container(
+            margin: const EdgeInsets.symmetric(vertical: 8),
+            decoration: BoxDecoration(
+              color: isDark ? SigeColors.darkSurface : Colors.grey.withOpacity(0.08),
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(
+                color: isDark ? SigeColors.darkBorder : SigeColors.lightBorder,
+                width: 0.8,
+              ),
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Tooltip(
+                  message: 'Histórico de Atendimentos',
+                  child: InkWell(
+                    onTap: () {
+                      Navigator.of(context).push(
+                        MaterialPageRoute(
+                          builder: (context) => HistoryAtendimentoScreen(
+                            tenantId: widget.tenantId,
+                          ),
+                        ),
+                      );
+                    },
+                    borderRadius: const BorderRadius.horizontal(left: Radius.circular(8)),
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                      child: Row(
+                        children: [
+                          Icon(
+                            LucideIcons.history,
+                            size: 15,
+                            color: isDark ? SigeColors.darkTextSecondary : SigeColors.lightTextSecondary,
+                          ),
+                          const SizedBox(width: 6),
+                          Text(
+                            'Histórico',
+                            style: TextStyle(
+                              fontSize: 12,
+                              fontWeight: FontWeight.w500,
+                              color: isDark ? SigeColors.darkTextSecondary : SigeColors.lightTextSecondary,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
                   ),
                 ),
-              );
-            },
+                Container(
+                  height: 18,
+                  width: 0.8,
+                  color: isDark ? SigeColors.darkBorder : SigeColors.lightBorder,
+                ),
+                Tooltip(
+                  message: 'Adicionar Etapa ao Funil',
+                  child: InkWell(
+                    onTap: () => _showAddEditColumnDialog(context, ref),
+                    borderRadius: const BorderRadius.horizontal(right: Radius.circular(8)),
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                      child: Row(
+                        children: [
+                          Icon(
+                            LucideIcons.plus,
+                            size: 15,
+                            color: isDark ? SigeColors.darkTextSecondary : SigeColors.lightTextSecondary,
+                          ),
+                          const SizedBox(width: 4),
+                          Text(
+                            'Nova Etapa',
+                            style: TextStyle(
+                              fontSize: 12,
+                              fontWeight: FontWeight.w500,
+                              color: isDark ? SigeColors.darkTextSecondary : SigeColors.lightTextSecondary,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
           ),
-          IconButton(
-            icon: const Icon(LucideIcons.plus, size: 18),
-            tooltip: 'Adicionar Etapa ao Funil',
-            onPressed: () => _showAddEditColumnDialog(context, ref),
-          ),
-          const SizedBox(width: 6),
+          const SizedBox(width: 10),
           FilledButton.icon(
             style: FilledButton.styleFrom(
               backgroundColor: colorScheme.primary,
               foregroundColor: Colors.white,
               padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+              elevation: 0,
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(8),
               ),
@@ -183,7 +252,7 @@ class _AtendimentoScreenState extends ConsumerState<AtendimentoScreen> {
             ),
             onPressed: () => _showAddCardDialog(context, ref),
           ),
-          const SizedBox(width: 14),
+          const SizedBox(width: 16),
         ],
       ),
       body: atendimentoAsync.when(
