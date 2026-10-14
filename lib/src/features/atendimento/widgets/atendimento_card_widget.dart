@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:sige/src/core/theme/sige_colors.dart';
 import 'package:sige/src/features/atendimento/models/atendimento_model.dart';
 import 'package:sige/src/features/atendimento/widgets/atendimento_avatar.dart';
+import 'package:sige/src/features/clientes/widgets/link_client_dialog.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 /// Widget de cartão de atendimento individual - Design Moderno (Sally UX)
@@ -238,6 +239,33 @@ class _AtendimentoCardWidgetState extends State<AtendimentoCardWidget> {
                               color: isDark
                                   ? SigeColors.darkTextMuted
                                   : SigeColors.lightTextMuted,
+                            ),
+                          ),
+                          const SizedBox(width: 4),
+                          Tooltip(
+                            message: 'Vincular a Empresa / Gerenciar Cliente',
+                            child: InkWell(
+                              onTap: () {
+                                showDialog(
+                                  context: context,
+                                  builder: (_) => LinkClientDialog(
+                                    tenantId: widget.card.tenantId,
+                                    telefone: widget.card.clienteTelefone,
+                                    nomeContato: widget.card.clienteNome,
+                                    leadOrAtendimentoId: widget.card.id,
+                                  ),
+                                );
+                              },
+                              borderRadius: BorderRadius.circular(4),
+                              child: Padding(
+                                padding: const EdgeInsets.symmetric(
+                                    horizontal: 3, vertical: 1),
+                                child: Icon(
+                                  Icons.link_rounded,
+                                  size: 14,
+                                  color: colorScheme.primary,
+                                ),
+                              ),
                             ),
                           ),
                         ],

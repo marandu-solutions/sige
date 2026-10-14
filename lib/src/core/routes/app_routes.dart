@@ -9,7 +9,7 @@ import 'package:sige/src/features/estoque/screens/estoque_screen.dart';
 import 'package:sige/src/features/atendimento/screens/atendimento_screen.dart';
 import 'package:sige/src/features/atendimento/screens/gerente_atendimento_screen.dart';
 import 'package:sige/src/features/admin_empresa/src/screens/admin_dashboard_screen.dart';
-import 'package:sige/src/features/leads/src/screens/leads_screen.dart';
+import 'package:sige/src/features/clientes/screens/clientes_screen.dart';
 
 class AppRoutes {
   static const String root = '/';
@@ -22,6 +22,7 @@ class AppRoutes {
   static const String adminEmpresa = '/admin_empresa';
   static const String gerenteAtendimento = '/gerente_atendimento';
   static const String leads = '/leads';
+  static const String clientes = '/clientes';
 
   // Mapa de módulos disponíveis - suporta nomes curtos (MD02) e prefixados (legado)
   static Map<String, Widget> modulosDisponiveis(String tenantId) => {
@@ -31,8 +32,10 @@ class AppRoutes {
     'module_gerente_atendimento': GerenteAtendimentoScreen(tenantId: tenantId),
     'estoque': EstoqueScreen(tenantId: tenantId),
     'module_estoque': EstoqueScreen(tenantId: tenantId),
-    'leads': LeadsScreen(tenantId: tenantId),
-    'module_leads': LeadsScreen(tenantId: tenantId),
+    'clientes': ClientesScreen(tenantId: tenantId),
+    'module_clientes': ClientesScreen(tenantId: tenantId),
+    'leads': ClientesScreen(tenantId: tenantId),
+    'module_leads': ClientesScreen(tenantId: tenantId),
     'admin_empresa': AdminDashboardScreen(tenantId: tenantId),
     'module_admin_empresa': AdminDashboardScreen(tenantId: tenantId),
     'dashboard': const AtendimentoDashboardScreen(),
@@ -86,10 +89,11 @@ class AppRoutes {
           );
         }
         return _errorRoute(settings.name);
+      case clientes:
       case leads:
         if (args != null && args.containsKey('tenantId')) {
           return MaterialPageRoute(
-            builder: (_) => LeadsScreen(tenantId: args['tenantId']),
+            builder: (_) => ClientesScreen(tenantId: args['tenantId']),
           );
         }
         return _errorRoute(settings.name);

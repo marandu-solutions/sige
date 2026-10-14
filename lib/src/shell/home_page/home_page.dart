@@ -70,7 +70,8 @@ class _HomePageState extends ConsumerState<HomePage> {
     final Set<String> modulosAdicionados = {};
 
     for (final moduloNome in modulosPermitidos) {
-      final normalized = moduloNome.replaceFirst('module_', '');
+      String normalized = moduloNome.replaceFirst('module_', '');
+      if (normalized == 'leads') normalized = 'clientes';
       // Remove kanban avulso (já incorporado dentro de Atendimento e Supervisão)
       if (normalized == 'kanban') continue;
       // Funcionário comum não tem acesso à tela de supervisão
@@ -128,10 +129,15 @@ class _HomePageState extends ConsumerState<HomePage> {
         'titulo': 'Admin',
         'icone': Icons.admin_panel_settings_rounded,
       },
+      'clientes': {
+        'rota': AppRoutes.clientes,
+        'titulo': 'Clientes',
+        'icone': Icons.people_alt_rounded,
+      },
       'leads': {
-        'rota': AppRoutes.leads,
-        'titulo': 'Leads',
-        'icone': Icons.contacts_rounded,
+        'rota': AppRoutes.clientes,
+        'titulo': 'Clientes',
+        'icone': Icons.people_alt_rounded,
       },
     };
     return metadataMap[normalized] ?? metadataMap[moduloNome] ?? {};

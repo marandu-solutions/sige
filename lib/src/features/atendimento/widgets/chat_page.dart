@@ -18,6 +18,7 @@ import 'package:sige/src/features/atendimento/widgets/video_player_widget.dart';
 import 'package:http/http.dart' as http;
 import 'package:path_provider/path_provider.dart';
 import 'package:record/record.dart';
+import 'package:sige/src/features/clientes/widgets/link_client_dialog.dart';
 
 class ChatPage extends ConsumerStatefulWidget {
   final String tenantId;
@@ -290,6 +291,24 @@ class _ChatPageState extends ConsumerState<ChatPage> {
                             ),
                           ),
                         ],
+                      ),
+                    ),
+                    Tooltip(
+                      message: 'Vincular a Empresa / Gerenciar Cliente',
+                      child: IconButton(
+                        icon: const Icon(Icons.link_rounded,
+                            color: Colors.white),
+                        onPressed: () {
+                          showDialog(
+                            context: context,
+                            builder: (_) => LinkClientDialog(
+                              tenantId: widget.tenantId,
+                              telefone: widget.contactPhone,
+                              nomeContato: widget.contactName,
+                              leadOrAtendimentoId: widget.atendimentoId,
+                            ),
+                          );
+                        },
                       ),
                     ),
                     IconButton(
