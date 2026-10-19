@@ -377,49 +377,53 @@ class _AddEditFuncionarioDialogState
   }
 
   String _formatModuleName(String module) {
-    switch (module.toUpperCase()) {
-      case 'MODULE_BASIC_DASHBOARD':
-        return 'Dashboard Básico';
-      case 'MODULE_ESTOQUE':
+    final normalized = module.toLowerCase().replaceAll('module_', '');
+    switch (normalized) {
+      case 'dashboard':
+      case 'basic_dashboard':
+        return 'Dashboard Executivo';
+      case 'estoque':
         return 'Gestão de Estoque';
-      case 'MODULE_KANBAN':
-        return 'Kanban de Tarefas';
-      case 'MODULE_ATENDIMENTO':
+      case 'atendimento':
         return 'Atendimento';
-      case 'MODULE_ADMIN_EMPRESA':
-        return 'Administração';
-      case 'MODULE_GERENTE_ATENDIMENTO':
-        return 'Gerência de Atendimento';
+      case 'gerente_atendimento':
+        return 'Supervisão de Atendimento';
+      case 'clientes':
+      case 'leads':
+        return 'Gestão de Clientes B2B/B2C';
+      case 'admin_empresa':
+        return 'Administração da Empresa';
+      case 'kanban':
+        return 'Kanban de Tarefas';
       default:
-        // Remove prefixo module_ ou MODULE_ (case insensitive)
-        String name =
-            module.replaceAll(RegExp(r'^module_', caseSensitive: false), '');
-        // Substitui underscores por espaços
-        name = name.replaceAll('_', ' ');
-        // Aplica Title Case
-        name = name.split(' ').map((word) {
+        // Substitui underscores por espaços e aplica Title Case
+        String name = normalized.replaceAll('_', ' ');
+        return name.split(' ').map((word) {
           if (word.isEmpty) return '';
           return '${word[0].toUpperCase()}${word.substring(1).toLowerCase()}';
         }).join(' ');
-
-        return 'Módulo $name';
     }
   }
 
   IconData _getModuleIcon(String module) {
-    switch (module.toUpperCase()) {
-      case 'MODULE_BASIC_DASHBOARD':
+    final normalized = module.toLowerCase().replaceAll('module_', '');
+    switch (normalized) {
+      case 'dashboard':
+      case 'basic_dashboard':
         return LucideIcons.layoutDashboard;
-      case 'MODULE_ESTOQUE':
+      case 'estoque':
         return LucideIcons.package;
-      case 'MODULE_KANBAN':
-        return LucideIcons.kanban;
-      case 'MODULE_ATENDIMENTO':
-        return LucideIcons.messageCircle;
-      case 'MODULE_ADMIN_EMPRESA':
+      case 'atendimento':
+        return LucideIcons.messageSquare;
+      case 'gerente_atendimento':
+        return LucideIcons.shieldAlert;
+      case 'clientes':
+      case 'leads':
+        return LucideIcons.users;
+      case 'admin_empresa':
         return LucideIcons.settings;
-      case 'MODULE_GERENTE_ATENDIMENTO':
-        return LucideIcons.userCog;
+      case 'kanban':
+        return LucideIcons.kanban;
       default:
         return LucideIcons.box;
     }
@@ -625,12 +629,31 @@ class _AddEditFuncionarioDialogState
                                   ),
                                 );
                               }
+                              // Deduplica e normaliza os módulos para evitar redundâncias legadas
+                              final modulosExibidos = <String>[];
+                              for (final m in tenant.modulosAtivos) {
+                                final norm = m.toLowerCase().replaceAll('module_', '');
+                                // Unifica 'leads' para 'clientes'
+                                final chave = norm == 'leads' ? 'clientes' : norm;
+                                if (!modulosExibidos.any((existente) =>
+                                    existente.toLowerCase().replaceAll('module_', '') == chave ||
+                                    (chave == 'clientes' && existente.toLowerCase().contains('leads')))) {
+                                  modulosExibidos.add(m);
+                                }
+                              }
+
                               return Wrap(
                                 spacing: 8,
                                 runSpacing: 8,
-                                children: tenant.modulosAtivos.map((modulo) {
-                                  final isSelected =
-                                      _selectedModulos.contains(modulo);
+                                children: modulosExibidos.map((modulo) {
+                                  final norm = modulo.toLowerCase().replaceAll('module_', '');
+                                  final isSelected = _selectedModulos.any((s) {
+                                    final sNorm = s.toLowerCase().replaceAll('module_', '');
+                                    return sNorm == norm ||
+                                        (norm == 'clientes' && sNorm == 'leads') ||
+                                        (norm == 'leads' && sNorm == 'clientes');
+                                  });
+
                                   return FilterChip(
                                     label: Text(_formatModuleName(modulo)),
                                     avatar: Icon(
@@ -645,8 +668,18 @@ class _AddEditFuncionarioDialogState
                                       setState(() {
                                         if (selected) {
                                           _selectedModulos.add(modulo);
+                                          // Garante compatibilidade caso legado use 'clientes' ou 'leads'
+                                          if (norm == 'clientes') {
+                                            _selectedModulos.add('leads');
+                                            _selectedModulos.add('module_leads');
+                                          }
                                         } else {
-                                          _selectedModulos.remove(modulo);
+                                          _selectedModulos.removeWhere((s) {
+                                            final sNorm = s.toLowerCase().replaceAll('module_', '');
+                                            return sNorm == norm ||
+                                                (norm == 'clientes' && sNorm == 'leads') ||
+                                                (norm == 'leads' && sNorm == 'clientes');
+                                          });
                                         }
                                       });
                                     },
