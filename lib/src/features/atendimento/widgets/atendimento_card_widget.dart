@@ -134,6 +134,65 @@ class _AtendimentoCardWidgetState extends State<AtendimentoCardWidget> {
                             ],
                           ),
                         ),
+                        // Badge de Classificação Financeira / Ticket (MD06 EPIs)
+                        if (widget.card.isB2BVip) ...[
+                          const SizedBox(width: 6),
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 6, vertical: 2.5),
+                            decoration: BoxDecoration(
+                              color: isDark
+                                  ? const Color(0xFF78350F).withOpacity(0.4)
+                                  : const Color(0xFFFEF3C7),
+                              borderRadius: BorderRadius.circular(5),
+                              border: Border.all(
+                                color: const Color(0xFFF59E0B),
+                                width: 0.8,
+                              ),
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                const Icon(
+                                  LucideIcons.crown,
+                                  size: 10,
+                                  color: Color(0xFFD97706),
+                                ),
+                                const SizedBox(width: 3),
+                                Text(
+                                  widget.card.valorEstimadoCalculado > 0
+                                      ? 'VIP • R\$ ${widget.card.valorEstimadoCalculado.toStringAsFixed(0)}'
+                                      : 'B2B VIP',
+                                  style: const TextStyle(
+                                    fontSize: 10,
+                                    fontWeight: FontWeight.w800,
+                                    color: Color(0xFFD97706),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ] else if (widget.card.valorEstimadoCalculado > 0) ...[
+                          const SizedBox(width: 6),
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 6, vertical: 2.5),
+                            decoration: BoxDecoration(
+                              color: isDark
+                                  ? Colors.white.withOpacity(0.06)
+                                  : Colors.black.withOpacity(0.04),
+                              borderRadius: BorderRadius.circular(5),
+                            ),
+                            child: Text(
+                              'R\$ ${widget.card.valorEstimadoCalculado.toStringAsFixed(0)}',
+                              style: TextStyle(
+                                fontSize: 10,
+                                fontWeight: FontWeight.w700,
+                                color: isDark ? Colors.white70 : Colors.black87,
+                              ),
+                            ),
+                          ),
+                        ],
                         const Spacer(),
 
                         // Badge de Mensagens Não Lidas (WhatsApp Style)

@@ -15,6 +15,27 @@ final atendimentoProvider = StreamNotifierProvider.family<AtendimentoNotifier,
   return AtendimentoNotifier();
 });
 
+/// Provider global de atendimento para o Cockpit do Gerente (Tower of Control).
+/// Carrega todos os cards do tenant sem filtrar por usuário logado.
+final globalAtendimentoProvider = StreamNotifierProvider.family<GlobalAtendimentoNotifier,
+    AtendimentoBoardModel, String>(() {
+  return GlobalAtendimentoNotifier();
+});
+
+class GlobalAtendimentoNotifier
+    extends FamilyStreamNotifier<AtendimentoBoardModel, String> {
+  @override
+  Stream<AtendimentoBoardModel> build(String tenantId) {
+    final userAsync = ref.watch(authStateProvider);
+    if (userAsync.isLoading || userAsync.valueOrNull == null) {
+      return Stream.value(AtendimentoBoardModel(cards: [], columns: []));
+    }
+    final atendimentoService = ref.read(atendimentoServiceProvider);
+    return atendimentoService.getAllBoardStream(tenantId);
+  }
+}
+
+
 class AtendimentoNotifier
     extends FamilyStreamNotifier<AtendimentoBoardModel, String> {
   @override

@@ -27,6 +27,13 @@ class AtendimentoModel {
   final bool isAtivo;
   final Map<String, dynamic> metadata;
 
+  // Campos de Inteligência Financeira e Segmentação (MD06)
+  final double? valorEstimado;
+  final String? categoriaTicket; // 'alto_ticket', 'medio_ticket', 'baixo_ticket'
+  final String? tipoCliente; // 'B2B_CORPORATIVO', 'B2B_PEQUENO', 'B2C_VAREJO'
+  final int? quantidadeItensEstimada;
+  final DateTime? ultimoFollowUpEm;
+
   AtendimentoModel({
     required this.id,
     required this.tenantId,
@@ -49,6 +56,11 @@ class AtendimentoModel {
     this.protocolo,
     this.isAtivo = true,
     this.metadata = const {},
+    this.valorEstimado,
+    this.categoriaTicket,
+    this.tipoCliente,
+    this.quantidadeItensEstimada,
+    this.ultimoFollowUpEm,
   });
 
   /// Converte um DocumentSnapshot do Firestore para um objeto AtendimentoModel.
@@ -59,6 +71,14 @@ class AtendimentoModel {
 
   /// Converte um Map para AtendimentoModel
   factory AtendimentoModel.fromMap(Map<String, dynamic> map, [String? id]) {
+    // Tenta obter valor estimado tanto de campo direto quanto de metadata
+    double? valor;
+    if (map['valor_estimado'] != null) {
+      valor = double.tryParse(map['valor_estimado'].toString());
+    } else if (map['metadata']?['valor_estimado'] != null) {
+      valor = double.tryParse(map['metadata']['valor_estimado'].toString());
+    }
+
     return AtendimentoModel(
       id: id ?? map['id'] ?? '',
       tenantId: map['tenant_id'] ?? '',
@@ -88,6 +108,11 @@ class AtendimentoModel {
       metadata: map['metadata'] != null
           ? Map<String, dynamic>.from(map['metadata'] as Map)
           : {},
+      valorEstimado: valor,
+      categoriaTicket: map['categoria_ticket'] ?? map['metadata']?['categoria_ticket'],
+      tipoCliente: map['tipo_cliente'] ?? map['metadata']?['tipo_cliente'],
+      quantidadeItensEstimada: int.tryParse(map['quantidade_itens_estimada']?.toString() ?? map['metadata']?['quantidade_itens_estimada']?.toString() ?? ''),
+      ultimoFollowUpEm: (map['ultimo_follow_up_em'] as Timestamp?)?.toDate(),
     );
   }
 
@@ -118,6 +143,13 @@ class AtendimentoModel {
       'protocolo': protocolo,
       'is_ativo': isAtivo,
       'metadata': metadata,
+      'valor_estimado': valorEstimado,
+      'categoria_ticket': categoriaTicket,
+      'tipo_cliente': tipoCliente,
+      'quantidade_itens_estimada': quantidadeItensEstimada,
+      'ultimo_follow_up_em': ultimoFollowUpEm != null
+          ? Timestamp.fromDate(ultimoFollowUpEm!)
+          : null,
     };
   }
 
@@ -144,6 +176,11 @@ class AtendimentoModel {
     String? protocolo,
     bool? isAtivo,
     Map<String, dynamic>? metadata,
+    double? valorEstimado,
+    String? categoriaTicket,
+    String? tipoCliente,
+    int? quantidadeItensEstimada,
+    DateTime? ultimoFollowUpEm,
   }) {
     return AtendimentoModel(
       id: id ?? this.id,
@@ -170,6 +207,51 @@ class AtendimentoModel {
       protocolo: protocolo ?? this.protocolo,
       isAtivo: isAtivo ?? this.isAtivo,
       metadata: metadata ?? this.metadata,
+      valorEstimado: valorEstimado ?? this.valorEstimado,
+      categoriaTicket: categoriaTicket ?? this.categoriaTicket,
+      tipoCliente: tipoCliente ?? this.tipoCliente,
+      quantidadeItensEstimada:
+          quantidadeItensEstimada ?? this.quantidadeItensEstimada,
+      ultimoFollowUpEm: ultimoFollowUpEm ?? this.ultimoFollowUpEm,
     );
+  }
+
+  // --- Getters Utilitários de Negócio (EPI & B2B) ---
+
+  /// Retorna o valor estimado em R$ (ou busca em metadata caso preenchido)
+  double get valorEstimadoCalculado {
+    if (valorEstimado != null && valorEstimado! > 0) return valorEstimado!;
+    if (metadata['valor_estimado'] != null) {
+      return double.tryParse(metadata['valor_estimado'].toString()) ?? 0.0;
+    }
+    if (metadata['valor'] != null) {
+      return double.tryParse(metadata['valor'].toString()) ?? 0.0;
+    }
+    return 0.0;
+  }
+
+  /// Indica se é uma conta B2B de alto ticket / VIP (>= R$ 5.000 ou explicitamente B2B Corporativo)
+  bool get isB2BVip {
+    if (valorEstimadoCalculado >= 5000.0) return true;
+    if (categoriaTicket == 'alto_ticket') return true;
+    if (tipoCliente == 'B2B_CORPORATIVO') return true;
+    if (metadata['is_vip'] == true || metadata['vip'] == true) return true;
+    return false;
+  }
+
+  /// Indica se é cliente de baixo ticket / varejo / balcão (< R$ 500)
+  bool get isBaixoTicket {
+    if (valorEstimadoCalculado > 0 && valorEstimadoCalculado < 500.0) return true;
+    if (categoriaTicket == 'baixo_ticket') return true;
+    if (tipoCliente == 'B2C_VAREJO') return true;
+    return false;
+  }
+
+  /// Rótulo visual do ticket para badges
+  String get ticketBadgeLabel {
+    if (isB2BVip) return 'B2B VIP';
+    if (isBaixoTicket) return 'Balcão/Varejo';
+    if (tipoCliente == 'B2B_PEQUENO') return 'B2B';
+    return 'Geral';
   }
 }
