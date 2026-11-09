@@ -18,7 +18,7 @@
 
   <meta charset="UTF-8">
   <meta content="IE=Edge" http-equiv="X-UA-Compatible">
-  <meta name="description" content="A new Flutter project.">
+  <meta name="description" content="SIGE - Sistema Integrado de Gestão Empresarial">
 
   <!-- iOS meta tags & icons -->
   <meta name="mobile-web-app-capable" content="yes">
@@ -29,13 +29,231 @@
   <!-- Favicon -->
   <link rel="icon" type="image/png" href="favicon.png"/>
 
-  <title>sige</title>
+  <title>SIGE</title>
   <link rel="manifest" href="manifest.json">
 
   <!-- Google Maps API Key -->
   <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyDtjZl6nalITswqnNOdLeXO8VBqC3fAWVU"></script>
 </head>
 <body>
+  <!-- Meta (Facebook) JavaScript SDK DOM Root -->
+  <div id="fb-root"></div>
+
+  <!-- Meta (Facebook) JavaScript SDK Async Loader -->
+  <script async defer crossorigin="anonymous" src="https://connect.facebook.net/en_US/sdk.js"></script>
+
+  <!-- SIGE WhatsApp Embedded Signup Bridge Script (Meta Graph API v21.0) -->
+  <script>
+    (function () {
+      // Session cache for postMessage events from Meta Embedded Signup popup
+      window._sigeWaSessionInfo = null;
+
+      // Listen for WA_EMBEDDED_SIGNUP message from authorized Meta origins
+      window.addEventListener('message', function (event) {
+        if (
+          event.origin !== 'https://www.facebook.com' &&
+          event.origin !== 'https://web.facebook.com'
+        ) {
+          return;
+        }
+
+        try {
+          var payload = typeof event.data === 'string' ? JSON.parse(event.data) : event.data;
+          if (payload && payload.type === 'WA_EMBEDDED_SIGNUP') {
+            console.log('[SIGE Meta Bridge] WA_EMBEDDED_SIGNUP postMessage received:', payload);
+            if (!window._sigeWaSessionInfo) {
+              window._sigeWaSessionInfo = payload;
+            } else {
+              window._sigeWaSessionInfo = {
+                type: payload.type,
+                event: payload.event || window._sigeWaSessionInfo.event,
+                data: Object.assign({}, window._sigeWaSessionInfo.data || {}, payload.data || {})
+              };
+            }
+          }
+        } catch (e) {
+          // Ignore non-JSON postMessages from extensions or third parties
+        }
+      });
+
+      // Helper to poll for FB SDK availability if still downloading
+      function _waitForFBSdk(timeoutMs) {
+        return new Promise(function (resolve) {
+          if (typeof FB !== 'undefined') {
+            resolve(true);
+            return;
+          }
+          var startTime = Date.now();
+          var interval = setInterval(function () {
+            if (typeof FB !== 'undefined') {
+              clearInterval(interval);
+              resolve(true);
+            } else if (Date.now() - startTime >= timeoutMs) {
+              clearInterval(interval);
+              resolve(false);
+            }
+          }, 100);
+        });
+      }
+
+      // Helper to wait for WA_EMBEDDED_SIGNUP postMessage data
+      function _waitForSessionData(timeoutMs) {
+        return new Promise(function (resolve) {
+          var startTime = Date.now();
+          var interval = setInterval(function () {
+            var data = (window._sigeWaSessionInfo && window._sigeWaSessionInfo.data) || {};
+            if (data.phone_number_id && data.waba_id) {
+              clearInterval(interval);
+              resolve(data);
+            } else if (Date.now() - startTime >= timeoutMs) {
+              clearInterval(interval);
+              resolve(data);
+            }
+          }, 50);
+        });
+      }
+
+      /**
+       * Global Launcher for Meta WhatsApp Embedded Signup.
+       * Invoked by Flutter Web via dart:js_interop.
+       * 
+       * @param {string} appId - Meta App ID
+       * @param {string} [configId] - Facebook Login for Business Configuration ID
+       * @returns {Promise<string>} JSON string with { status, code, waba_id, phone_number_id, business_id, error_message }
+       */
+      window.sigeLaunchWhatsAppEmbeddedSignup = function (appId, configId) {
+        return new Promise(function (resolve) {
+          // 1. Validate App ID input
+          if (!appId || typeof appId !== 'string' || appId.trim() === '') {
+            resolve(JSON.stringify({
+              status: 'ERROR',
+              error_message: 'Meta App ID não configurado ou inválido.'
+            }));
+            return;
+          }
+
+          var trimmedAppId = appId.trim();
+
+          // 2. Simulation / Homologation Mode Support
+          if (trimmedAppId === 'SIMULATION' || trimmedAppId === 'MOCK' || trimmedAppId === 'homologacao') {
+            console.log('[SIGE Meta Bridge] Running in Simulation/Homologation Mode');
+            setTimeout(function () {
+              resolve(JSON.stringify({
+                status: 'SUCCESS',
+                code: 'mock_code_meta_' + Date.now(),
+                waba_id: 'waba_mock_9988776655',
+                phone_number_id: 'phone_mock_1092837465',
+                business_id: 'biz_mock_5544332211'
+              }));
+            }, 1000);
+            return;
+          }
+
+          // 3. Reset session info cache for clean flow
+          window._sigeWaSessionInfo = null;
+          var launchTimestamp = Date.now();
+
+          // 4. Ensure FB SDK is loaded
+          _waitForFBSdk(3000).then(function (sdkAvailable) {
+            if (!sdkAvailable || typeof FB === 'undefined') {
+              resolve(JSON.stringify({
+                status: 'ERROR',
+                error_message: 'SDK da Meta (Facebook JS SDK) não foi carregado. Verifique sua conexão com a internet ou se o bloqueador de anúncios (AdBlock) está ativo.'
+              }));
+              return;
+            }
+
+            // 5. Initialize FB SDK with target appId and Graph API v21.0
+            try {
+              FB.init({
+                appId: trimmedAppId,
+                cookie: true,
+                xfbml: true,
+                version: 'v21.0'
+              });
+            } catch (initErr) {
+              console.warn('[SIGE Meta Bridge] FB.init warning:', initErr);
+            }
+
+            // 6. Build login options conforming to Meta Embedded Signup v3
+            var loginOptions = {
+              response_type: 'code',
+              override_default_response_type: true,
+              scope: 'whatsapp_business_management,whatsapp_business_messaging',
+              extras: {
+                setup: {},
+                featureType: '',
+                sessionInfoVersion: '3'
+              }
+            };
+
+            if (configId && typeof configId === 'string' && configId.trim() !== '') {
+              loginOptions.config_id = configId.trim();
+            }
+
+            // 7. Launch FB.login popup
+            try {
+              FB.login(function (response) {
+                var elapsedMs = Date.now() - launchTimestamp;
+
+                if (response && response.authResponse && response.authResponse.code) {
+                  var authCode = response.authResponse.code;
+
+                  // Wait briefly if session postMessage hasn't arrived yet
+                  _waitForSessionData(1500).then(function (sessionData) {
+                    var wabaId = sessionData.waba_id || sessionData.wabaId || '';
+                    var phoneNumberId = sessionData.phone_number_id || sessionData.phoneNumberId || '';
+                    var businessId = sessionData.business_id || sessionData.businessId || '';
+
+                    resolve(JSON.stringify({
+                      status: 'SUCCESS',
+                      code: authCode,
+                      waba_id: wabaId,
+                      phone_number_id: phoneNumberId,
+                      business_id: businessId
+                    }));
+                  });
+                } else {
+                  // Non-success handling: check for cancellations, errors, or popup blocker
+                  var sessionData = (window._sigeWaSessionInfo && window._sigeWaSessionInfo.data) || {};
+                  var sessionEvent = window._sigeWaSessionInfo && window._sigeWaSessionInfo.event;
+
+                  if (sessionEvent === 'ERROR') {
+                    resolve(JSON.stringify({
+                      status: 'ERROR',
+                      error_message: sessionData.error_message || 'Erro durante o cadastro incorporado na Meta.'
+                    }));
+                  } else if (sessionEvent === 'CANCEL') {
+                    var step = sessionData.current_step;
+                    resolve(JSON.stringify({
+                      status: 'CANCELLED',
+                      error_message: step ? ('Cadastro cancelado pelo usuário na etapa: ' + step) : 'Cadastro cancelado pelo usuário.'
+                    }));
+                  } else if (elapsedMs < 300 && !window._sigeWaSessionInfo) {
+                    resolve(JSON.stringify({
+                      status: 'ERROR',
+                      error_message: 'Janela popup bloqueada pelo navegador. Permita popups para este site na barra de endereços e tente novamente.'
+                    }));
+                  } else {
+                    resolve(JSON.stringify({
+                      status: 'CANCELLED',
+                      error_message: (response && response.error_message) || 'Janela de cadastro fechada pelo usuário antes da conclusão.'
+                    }));
+                  }
+                }
+              }, loginOptions);
+            } catch (loginErr) {
+              resolve(JSON.stringify({
+                status: 'ERROR',
+                error_message: 'Falha ao acionar FB.login: ' + (loginErr && loginErr.message ? loginErr.message : String(loginErr))
+              }));
+            }
+          });
+        });
+      };
+    })();
+  </script>
+
   <script src="flutter_bootstrap.js" async></script>
 </body>
 </html>

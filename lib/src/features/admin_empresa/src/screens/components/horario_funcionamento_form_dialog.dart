@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
+import 'package:sige/src/core/core.dart';
 import 'package:sige/src/features/admin_empresa/src/models/horario_model.dart';
 
 class HorarioFuncionamentoFormDialog extends StatefulWidget {
@@ -102,171 +103,347 @@ class _HorarioFuncionamentoFormDialogState
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final cs = theme.colorScheme;
-    final textTheme = theme.textTheme;
+    final isDark = theme.brightness == Brightness.dark;
+    final primaryColor = const Color(0xFF2563EB);
 
-    return AlertDialog(
-      backgroundColor: cs.surface,
-      surfaceTintColor: cs.surface,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-      title: Row(
-        children: [
-          Icon(LucideIcons.clock, color: cs.primary),
-          const SizedBox(width: 10),
-          Text(
-            "Horário de Funcionamento",
-            style: textTheme.titleLarge?.copyWith(
-              fontWeight: FontWeight.bold,
-              color: cs.onSurface,
+    return Dialog(
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+      elevation: 0,
+      backgroundColor: Colors.transparent,
+      child: Center(
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 580, maxHeight: 820),
+          child: Container(
+            decoration: BoxDecoration(
+              color: isDark ? const Color(0xFF0F172A) : Colors.white,
+              borderRadius: BorderRadius.circular(24),
+              border: Border.all(
+                color: isDark ? Colors.white.withValues(alpha: 0.12) : const Color(0xFFE2E8F0),
+                width: 1.2,
+              ),
+              boxShadow: [
+                BoxShadow(
+                  color: isDark
+                      ? Colors.black.withValues(alpha: 0.6)
+                      : primaryColor.withValues(alpha: 0.14),
+                  blurRadius: 36,
+                  offset: const Offset(0, 16),
+                  spreadRadius: 2,
+                ),
+              ],
             ),
-          ),
-        ],
-      ),
-      content: SizedBox(
-        width: double.maxFinite,
-        child: SingleChildScrollView(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: _diasDaSemana.map((dia) {
-              final diaChave = _diaParaChave[dia]!;
-              final ranges = _horariosEditaveis[diaChave]!;
-              return Card(
-                margin: const EdgeInsets.symmetric(vertical: 8),
-                elevation: 1,
-                shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12)),
-                child: Padding(
-                  padding: const EdgeInsets.all(12.0),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        dia,
-                        style: textTheme.titleMedium?.copyWith(
-                            fontWeight: FontWeight.bold, color: cs.onSurface),
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(24),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  // Header
+                  Container(
+                    padding: const EdgeInsets.fromLTRB(26, 24, 20, 20),
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        colors: isDark
+                            ? [const Color(0xFF1E293B), const Color(0xFF0F172A)]
+                            : [const Color(0xFFF8FAFC), Colors.white],
                       ),
-                      const SizedBox(height: 8),
-                      if (ranges.isEmpty)
-                        Text(
-                          'Fechado',
-                          style: textTheme.bodyMedium?.copyWith(
-                              fontStyle: FontStyle.italic,
-                              color: cs.onSurfaceVariant),
+                      border: Border(
+                        bottom: BorderSide(
+                          color: isDark ? Colors.white.withValues(alpha: 0.08) : const Color(0xFFE2E8F0),
                         ),
-                      ...ranges.asMap().entries.map((entry) {
-                        int idx = entry.key;
-                        TimeRange range = entry.value;
-                        return Padding(
-                          padding: const EdgeInsets.symmetric(vertical: 4.0),
-                          child: Row(
-                            children: [
-                              Expanded(
-                                child: InkWell(
-                                  onTap: () => _pickTime(
-                                    initialTime: range.start,
-                                    onTimeSelected: (newTime) {
-                                      setState(() {
-                                        range.start = newTime;
-                                      });
-                                    },
-                                  ),
-                                  child: InputChip(
-                                    label: Text(
-                                      range.start.format(context),
-                                      style: textTheme.bodyLarge?.copyWith(
-                                          color: cs.onPrimaryContainer),
-                                    ),
-                                    backgroundColor: cs.primaryContainer,
-                                    onPressed: () => _pickTime(
-                                      initialTime: range.start,
-                                      onTimeSelected: (newTime) {
-                                        setState(() {
-                                          range.start = newTime;
-                                        });
-                                      },
-                                    ),
-                                  ),
-                                ),
-                              ),
-                              const SizedBox(width: 8),
-                              Text('-',
-                                  style: textTheme.bodyLarge
-                                      ?.copyWith(color: cs.onSurface)),
-                              const SizedBox(width: 8),
-                              Expanded(
-                                child: InkWell(
-                                  onTap: () => _pickTime(
-                                    initialTime: range.end,
-                                    onTimeSelected: (newTime) {
-                                      setState(() {
-                                        range.end = newTime;
-                                      });
-                                    },
-                                  ),
-                                  child: InputChip(
-                                    label: Text(
-                                      range.end.format(context),
-                                      style: textTheme.bodyLarge?.copyWith(
-                                          color: cs.onPrimaryContainer),
-                                    ),
-                                    backgroundColor: cs.primaryContainer,
-                                    onPressed: () => _pickTime(
-                                      initialTime: range.end,
-                                      onTimeSelected: (newTime) {
-                                        setState(() {
-                                          range.end = newTime;
-                                        });
-                                      },
-                                    ),
-                                  ),
-                                ),
-                              ),
-                              IconButton(
-                                icon:
-                                    Icon(LucideIcons.xCircle, color: cs.error),
-                                onPressed: () =>
-                                    _removeTimeRange(diaChave, idx),
+                      ),
+                    ),
+                    child: Row(
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.all(12),
+                          decoration: BoxDecoration(
+                            gradient: const LinearGradient(
+                              colors: [Color(0xFF2563EB), Color(0xFF1D4ED8)],
+                            ),
+                            borderRadius: BorderRadius.circular(16),
+                            boxShadow: [
+                              BoxShadow(
+                                color: primaryColor.withValues(alpha: 0.35),
+                                blurRadius: 12,
+                                offset: const Offset(0, 4),
                               ),
                             ],
                           ),
-                        );
-                      }),
-                      Align(
-                        alignment: Alignment.centerRight,
-                        child: TextButton.icon(
-                          onPressed: () => _addTimeRange(diaChave),
-                          icon: Icon(LucideIcons.plus, color: cs.primary),
-                          label: Text(
-                            'Adicionar Horário',
-                            style: textTheme.labelLarge
-                                ?.copyWith(color: cs.primary),
+                          child: const Icon(LucideIcons.clock, color: Colors.white, size: 22),
+                        ),
+                        const SizedBox(width: 16),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                'Horário de Funcionamento',
+                                style: TextStyle(
+                                  fontWeight: FontWeight.w900,
+                                  fontSize: 18,
+                                  letterSpacing: -0.4,
+                                  color: isDark ? Colors.white : SigeColors.lightTextPrimary,
+                                ),
+                              ),
+                              const SizedBox(height: 2),
+                              Text(
+                                'Defina as faixas de atendimento e operação para cada dia',
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  color: isDark ? Colors.grey[400] : SigeColors.lightTextSecondary,
+                                ),
+                              ),
+                            ],
                           ),
                         ),
-                      ),
-                    ],
+                        Material(
+                          color: Colors.transparent,
+                          child: InkWell(
+                            onTap: () => Navigator.pop(context),
+                            borderRadius: BorderRadius.circular(12),
+                            child: Container(
+                              padding: const EdgeInsets.all(8),
+                              decoration: BoxDecoration(
+                                color: isDark
+                                    ? Colors.white.withValues(alpha: 0.06)
+                                    : const Color(0xFFF1F5F9),
+                                borderRadius: BorderRadius.circular(12),
+                                border: Border.all(
+                                  color: isDark ? Colors.white10 : const Color(0xFFE2E8F0),
+                                ),
+                              ),
+                              child: Icon(
+                                LucideIcons.x,
+                                size: 18,
+                                color: isDark ? Colors.grey[300] : Colors.grey[600],
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
-                ),
-              );
-            }).toList(),
+
+                  // Lista de Dias da Semana
+                  Flexible(
+                    child: ListView.separated(
+                      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 18),
+                      itemCount: _diasDaSemana.length,
+                      separatorBuilder: (_, __) => const SizedBox(height: 12),
+                      itemBuilder: (context, index) {
+                        final dia = _diasDaSemana[index];
+                        final diaChave = _diaParaChave[dia]!;
+                        final ranges = _horariosEditaveis[diaChave]!;
+                        final isAberto = ranges.isNotEmpty;
+
+                        return Container(
+                          padding: const EdgeInsets.all(14),
+                          decoration: BoxDecoration(
+                            color: isDark ? const Color(0xFF1E293B).withValues(alpha: 0.5) : const Color(0xFFF8FAFC),
+                            borderRadius: BorderRadius.circular(14),
+                            border: Border.all(
+                              color: isAberto
+                                  ? const Color(0xFF2563EB).withValues(alpha: isDark ? 0.35 : 0.25)
+                                  : (isDark ? Colors.white10 : const Color(0xFFE2E8F0)),
+                            ),
+                          ),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Row(
+                                children: [
+                                  Text(
+                                    dia,
+                                    style: TextStyle(
+                                      fontWeight: FontWeight.w800,
+                                      fontSize: 13.5,
+                                      color: isDark ? Colors.white : SigeColors.lightTextPrimary,
+                                    ),
+                                  ),
+                                  const Spacer(),
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2.5),
+                                    decoration: BoxDecoration(
+                                      color: isAberto
+                                          ? const Color(0xFF10B981).withValues(alpha: 0.15)
+                                          : Colors.grey.withValues(alpha: 0.15),
+                                      borderRadius: BorderRadius.circular(6),
+                                    ),
+                                    child: Text(
+                                      isAberto ? 'ABERTO' : 'FECHADO',
+                                      style: TextStyle(
+                                        fontSize: 9.5,
+                                        fontWeight: FontWeight.w900,
+                                        letterSpacing: 0.4,
+                                        color: isAberto ? const Color(0xFF10B981) : Colors.grey,
+                                      ),
+                                    ),
+                                  ),
+                                  const SizedBox(width: 8),
+                                  TextButton.icon(
+                                    onPressed: () => _addTimeRange(diaChave),
+                                    icon: const Icon(LucideIcons.plus, size: 13),
+                                    label: const Text('Horário', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700)),
+                                    style: TextButton.styleFrom(
+                                      foregroundColor: const Color(0xFF2563EB),
+                                      visualDensity: VisualDensity.compact,
+                                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              if (ranges.isNotEmpty) ...[
+                                const SizedBox(height: 10),
+                                ...ranges.asMap().entries.map((entry) {
+                                  final idx = entry.key;
+                                  final range = entry.value;
+
+                                  return Padding(
+                                    padding: const EdgeInsets.only(bottom: 6.0),
+                                    child: Row(
+                                      children: [
+                                        _buildTimeBox(
+                                          time: range.start,
+                                          isDark: isDark,
+                                          onTap: () => _pickTime(
+                                            initialTime: range.start,
+                                            onTimeSelected: (t) => setState(() => range.start = t),
+                                          ),
+                                        ),
+                                        Padding(
+                                          padding: const EdgeInsets.symmetric(horizontal: 8.0),
+                                          child: Text('às', style: TextStyle(fontSize: 12, color: Colors.grey[500], fontWeight: FontWeight.bold)),
+                                        ),
+                                        _buildTimeBox(
+                                          time: range.end,
+                                          isDark: isDark,
+                                          onTap: () => _pickTime(
+                                            initialTime: range.end,
+                                            onTimeSelected: (t) => setState(() => range.end = t),
+                                          ),
+                                        ),
+                                        const SizedBox(width: 6),
+                                        IconButton(
+                                          tooltip: 'Remover faixa',
+                                          icon: const Icon(LucideIcons.trash2, size: 15, color: Color(0xFFEF4444)),
+                                          onPressed: () => _removeTimeRange(diaChave, idx),
+                                          visualDensity: VisualDensity.compact,
+                                        ),
+                                      ],
+                                    ),
+                                  );
+                                }),
+                              ],
+                            ],
+                          ),
+                        );
+                      },
+                    ),
+                  ),
+
+                  // Actions Footer
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 26, vertical: 18),
+                    decoration: BoxDecoration(
+                      color: isDark ? const Color(0xFF131D2E) : const Color(0xFFF8FAFC),
+                      border: Border(
+                        top: BorderSide(
+                          color: isDark ? Colors.white.withValues(alpha: 0.08) : const Color(0xFFE2E8F0),
+                        ),
+                      ),
+                    ),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.end,
+                      children: [
+                        TextButton(
+                          onPressed: () => Navigator.pop(context),
+                          style: TextButton.styleFrom(
+                            foregroundColor: isDark ? Colors.grey[300] : SigeColors.lightTextSecondary,
+                            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                          ),
+                          child: const Text('Cancelar', style: TextStyle(fontWeight: FontWeight.w700, fontSize: 13)),
+                        ),
+                        const SizedBox(width: 12),
+                        Container(
+                          decoration: BoxDecoration(
+                            gradient: const LinearGradient(
+                              colors: [Color(0xFF2563EB), Color(0xFF1D4ED8)],
+                            ),
+                            borderRadius: BorderRadius.circular(12),
+                            boxShadow: [
+                              BoxShadow(
+                                color: primaryColor.withValues(alpha: 0.35),
+                                blurRadius: 10,
+                                offset: const Offset(0, 3),
+                              ),
+                            ],
+                          ),
+                          child: ElevatedButton.icon(
+                            onPressed: _salvarHorarios,
+                            icon: const Icon(LucideIcons.check, size: 16),
+                            label: const Text('Salvar Horários', style: TextStyle(fontWeight: FontWeight.w800, fontSize: 13)),
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: Colors.transparent,
+                              foregroundColor: Colors.white,
+                              shadowColor: Colors.transparent,
+                              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
           ),
         ),
       ),
-      actions: [
-        TextButton(
-          onPressed: () => Navigator.of(context).pop(),
-          child: Text(
-            "Cancelar",
-            style: textTheme.labelLarge?.copyWith(color: cs.onSurfaceVariant),
+    );
+  }
+
+  Widget _buildTimeBox({
+    required TimeOfDay time,
+    required bool isDark,
+    required VoidCallback onTap,
+  }) {
+    final hora = time.hour.toString().padLeft(2, '0');
+    final minuto = time.minute.toString().padLeft(2, '0');
+
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(8),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+        decoration: BoxDecoration(
+          color: isDark ? const Color(0xFF0F172A) : Colors.white,
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(
+            color: const Color(0xFF2563EB).withValues(alpha: 0.5),
+            width: 1.2,
           ),
         ),
-        FilledButton(
-          onPressed: _salvarHorarios,
-          child: Text(
-            "Salvar",
-            style: textTheme.labelLarge?.copyWith(color: cs.onPrimary),
-          ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Icon(LucideIcons.clock, size: 13, color: Color(0xFF2563EB)),
+            const SizedBox(width: 6),
+            Text(
+              '$hora:$minuto',
+              style: TextStyle(
+                fontWeight: FontWeight.w800,
+                fontSize: 13,
+                letterSpacing: 0.5,
+                color: isDark ? Colors.white : const Color(0xFF0F172A),
+              ),
+            ),
+          ],
         ),
-      ],
+      ),
     );
   }
 }
+

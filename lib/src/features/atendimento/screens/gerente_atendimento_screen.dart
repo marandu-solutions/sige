@@ -20,7 +20,6 @@ import 'package:sige/src/features/atendimento/widgets/atendente_cabine_card_widg
 import 'package:sige/src/features/atendimento/widgets/atendente_inspection_drawer.dart';
 import 'package:sige/src/features/atendimento/widgets/politicas_transbordo_dialog.dart';
 import 'package:sige/src/features/atendimento/widgets/chat_page.dart';
-import 'package:sige/src/features/atendimento/widgets/exp_atendimento_config_dialog.dart';
 import 'package:sige/src/features/atendimento/screens/history_atendimento_screen/history_atendimento_screen.dart';
 
 /// Torre de Controle Executiva de Atendimento & Call Center (Sally UX - Edição Aero-Cyber)
@@ -306,7 +305,7 @@ class _GerenteAtendimentoScreenState
               ),
               const SizedBox(height: 1),
               Text(
-                'Supervisão Operacional • Gestão de Sobrecarga e Políticas de Transbordo',
+                'Supervisão Operacional • Gestão de Sobrecarga',
                 style: TextStyle(
                   fontSize: 11,
                   fontWeight: FontWeight.w500,
@@ -343,7 +342,7 @@ class _GerenteAtendimentoScreenState
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
             ),
             icon: const Icon(LucideIcons.slidersHorizontal, size: 15),
-            label: const Text('Políticas de Transbordo', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
+            label: const Text('Políticas de SLAs', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
             onPressed: () => PoliticasTransbordoDialog.show(
               context,
               tenantId: widget.tenantId,
@@ -384,24 +383,6 @@ class _GerenteAtendimentoScreenState
               MaterialPageRoute(
                 builder: (_) => HistoryAtendimentoScreen(tenantId: widget.tenantId),
               ),
-            );
-          },
-        ),
-        const SizedBox(width: 8),
-
-        // Botão SLAs
-        OutlinedButton.icon(
-          style: OutlinedButton.styleFrom(
-            padding: const EdgeInsets.symmetric(horizontal: 13, vertical: 9),
-            side: BorderSide(color: isDark ? Colors.white24 : const Color(0xFFCBD5E1)),
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-          ),
-          icon: const Icon(LucideIcons.clock, size: 15),
-          label: const Text('SLAs', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600)),
-          onPressed: () {
-            showDialog(
-              context: context,
-              builder: (ctx) => ExpAtendimentoConfigDialog(tenantId: widget.tenantId),
             );
           },
         ),

@@ -2,7 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:sige/src/core/theme/sige_colors.dart';
+import 'package:sige/src/features/admin_empresa/src/providers/tenant_provider.dart';
+import 'package:sige/src/features/admin_empresa/src/services/admin_empresa_service.dart';
 import 'package:sige/src/features/atendimento/models/config_atendimento_model.dart';
+import 'package:sige/src/features/atendimento/providers/atendimento_provider.dart';
 import 'package:sige/src/features/atendimento/providers/config_atendimento_provider.dart';
 
 class PoliticasTransbordoDialog extends ConsumerStatefulWidget {
@@ -46,6 +49,10 @@ class _PoliticasTransbordoDialogState
   late TextEditingController _msgAcolhimentoController;
   bool _salvando = false;
 
+  bool _expiracaoAtiva = false;
+  int _horasExpiracao = 24;
+  bool _expiracaoInitialized = false;
+
   @override
   void initState() {
     super.initState();
@@ -81,10 +88,23 @@ class _PoliticasTransbordoDialogState
         mensagemAcolhimentoTransbordo: _msgAcolhimentoController.text.trim(),
       );
 
+      // 1. Salva políticas de transbordo e capacidades
       await ref.read(configAtendimentoServiceProvider).salvarConfiguracoes(
             tenantId: widget.tenantId,
             config: novaConfig,
           );
+
+      // 2. Salva tempo de expiração / encerramento automático no tenant
+      final int tempoSalvar = _expiracaoAtiva ? _horasExpiracao : 0;
+      await ref.read(adminEmpresaServiceProvider).updateTempoAtendimento(
+            widget.tenantId,
+            tempoSalvar,
+          );
+
+      // Invalida os providers para atualizar toda a torre e boards
+      ref.invalidate(tenantProvider(widget.tenantId));
+      ref.invalidate(configAtendimentoProvider(widget.tenantId));
+      ref.invalidate(globalAtendimentoProvider(widget.tenantId));
 
       if (mounted) {
         Navigator.of(context).pop();
@@ -113,11 +133,25 @@ class _PoliticasTransbordoDialogState
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
+    // Inicializa o tempo de expiração do atendimento a partir do tenant
+    final tenantAsync = ref.watch(tenantProvider(widget.tenantId));
+    final tenant = tenantAsync.valueOrNull;
+    if (!_expiracaoInitialized && tenant != null) {
+      if (tenant.tempoAtendimento > 0) {
+        _expiracaoAtiva = true;
+        _horasExpiracao = tenant.tempoAtendimento;
+      } else {
+        _expiracaoAtiva = false;
+        _horasExpiracao = 24;
+      }
+      _expiracaoInitialized = true;
+    }
+
     return Dialog(
       backgroundColor: isDark ? const Color(0xFF1E293B) : Colors.white,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
       child: ConstrainedBox(
-        constraints: const BoxConstraints(maxWidth: 680, maxHeight: 720),
+        constraints: const BoxConstraints(maxWidth: 720, maxHeight: 760),
         child: Padding(
           padding: const EdgeInsets.all(24.0),
           child: Column(
@@ -144,7 +178,7 @@ class _PoliticasTransbordoDialogState
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          'Governança de Sobrecarga e Transbordo',
+                          'Governança de Transbordo, Capacidades & Expiração',
                           style: TextStyle(
                             fontSize: 18,
                             fontWeight: FontWeight.bold,
@@ -153,7 +187,7 @@ class _PoliticasTransbordoDialogState
                         ),
                         const SizedBox(height: 2),
                         Text(
-                          'Defina capacidades máximas, limites de vácuo e destino do excedente da central',
+                          'Defina capacidades máximas, limites de vácuo, regras de transbordo e tempo de expiração',
                           style: TextStyle(
                             fontSize: 13,
                             color: isDark ? Colors.grey[400] : SigeColors.lightTextSecondary,
@@ -293,6 +327,20 @@ class _PoliticasTransbordoDialogState
                         ),
                       ],
                     ),
+
+                    const SizedBox(height: 24),
+                    const Divider(),
+                    const SizedBox(height: 16),
+
+                    // Seção 4: Tempo de Expiração & Encerramento Automático
+                    _buildSectionHeader(
+                      icon: LucideIcons.timerReset,
+                      title: 'Tempo de Expiração & Encerramento Automático',
+                      subtitle: 'Encerre e arquive conversas inativas para liberar a esteira e evitar atendimentos fantasmas',
+                      isDark: isDark,
+                    ),
+                    const SizedBox(height: 12),
+                    _buildExpiracaoSection(isDark: isDark),
                   ],
                 ),
               ),
@@ -528,6 +576,178 @@ class _PoliticasTransbordoDialogState
             ),
           ],
         ),
+      ),
+    );
+  }
+
+  Widget _buildExpiracaoSection({required bool isDark}) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: isDark ? const Color(0xFF0F172A) : const Color(0xFFF8FAFC),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: _expiracaoAtiva
+              ? const Color(0xFF2563EB).withValues(alpha: 0.35)
+              : (isDark ? Colors.white12 : const Color(0xFFE2E8F0)),
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Encerrar atendimentos inativos automaticamente',
+                      style: TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.bold,
+                        color: isDark ? Colors.white : SigeColors.lightTextPrimary,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      'Libera a esteira arquivando conversas sem nova mensagem após o período limite.',
+                      style: TextStyle(
+                        fontSize: 11,
+                        color: isDark ? Colors.grey[400] : SigeColors.lightTextSecondary,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              Switch(
+                value: _expiracaoAtiva,
+                activeThumbColor: Colors.white,
+                activeTrackColor: const Color(0xFF2563EB),
+                onChanged: (val) {
+                  setState(() => _expiracaoAtiva = val);
+                },
+              ),
+            ],
+          ),
+          if (_expiracaoAtiva) ...[
+            const SizedBox(height: 16),
+            const Divider(height: 1),
+            const SizedBox(height: 16),
+
+            // Chips de atalho rápido
+            Row(
+              children: [
+                Text(
+                  'Atalhos:',
+                  style: TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                    color: isDark ? Colors.grey[400] : SigeColors.lightTextSecondary,
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Wrap(
+                    spacing: 8,
+                    runSpacing: 6,
+                    children: [6, 12, 24, 48, 72].map((horas) {
+                      final isSelected = _horasExpiracao == horas;
+                      return InkWell(
+                        onTap: () => setState(() => _horasExpiracao = horas),
+                        borderRadius: BorderRadius.circular(8),
+                        child: AnimatedContainer(
+                          duration: const Duration(milliseconds: 150),
+                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                          decoration: BoxDecoration(
+                            color: isSelected
+                                ? const Color(0xFF2563EB)
+                                : (isDark ? const Color(0xFF1E293B) : Colors.white),
+                            borderRadius: BorderRadius.circular(8),
+                            border: Border.all(
+                              color: isSelected
+                                  ? const Color(0xFF2563EB)
+                                  : (isDark ? Colors.white24 : const Color(0xFFCBD5E1)),
+                            ),
+                          ),
+                          child: Text(
+                            '$horas h${horas == 24 ? " (1 dia)" : horas == 48 ? " (2 dias)" : horas == 72 ? " (3 dias)" : ""}',
+                            style: TextStyle(
+                              fontSize: 11,
+                              fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
+                              color: isSelected
+                                  ? Colors.white
+                                  : (isDark ? Colors.grey[300] : const Color(0xFF334155)),
+                            ),
+                          ),
+                        ),
+                      );
+                    }).toList(),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 16),
+
+            // Slider e display
+            Row(
+              children: [
+                Expanded(
+                  child: Slider(
+                    value: _horasExpiracao.toDouble().clamp(1.0, 72.0),
+                    min: 1,
+                    max: 72,
+                    divisions: 71,
+                    activeColor: const Color(0xFF2563EB),
+                    label: '$_horasExpiracao h',
+                    onChanged: (v) => setState(() => _horasExpiracao = v.round()),
+                  ),
+                ),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF2563EB).withValues(alpha: 0.12),
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(color: const Color(0xFF2563EB)),
+                  ),
+                  child: Text(
+                    '$_horasExpiracao ${_horasExpiracao == 1 ? "hora" : "horas"}',
+                    style: const TextStyle(
+                      color: Color(0xFF2563EB),
+                      fontWeight: FontWeight.bold,
+                      fontSize: 13,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 8),
+
+            // Info note
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+              decoration: BoxDecoration(
+                color: const Color(0xFF2563EB).withValues(alpha: 0.08),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Row(
+                children: [
+                  const Icon(LucideIcons.info, size: 14, color: Color(0xFF2563EB)),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      'Atendimentos sem novas mensagens há mais de $_horasExpiracao horas serão arquivados automaticamente na esteira.',
+                      style: TextStyle(
+                        fontSize: 11,
+                        color: isDark ? const Color(0xFF93C5FD) : const Color(0xFF1D4ED8),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ],
       ),
     );
   }
